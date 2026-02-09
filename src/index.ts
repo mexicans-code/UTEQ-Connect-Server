@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './database/MongoDB.js';
 import locationRoutes from './apis/location/location.routes.js';
+import eventRoutes from './apis/event/event.routes.js';
+import userRoutes from './apis/user/user.routes.js';
 
 dotenv.config();
 
@@ -19,6 +21,8 @@ connectDB();
 
 // Routes
 app.use('/api/locations', locationRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/users', userRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -29,6 +33,8 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
     console.log(`API Locations: http://localhost:${PORT}/api/locations`);
+    console.log(`API Events: http://localhost:${PORT}/api/events`);
+    console.log(`API Users: http://localhost:${PORT}/api/users`);
 });
 
 export default app;
