@@ -49,16 +49,6 @@ app.get('/', (req: Request, res: Response) => {
     });
 });
 
-// Health check
-app.get('/health', (req: Request, res: Response) => {
-    res.status(200).json({
-        status: 'healthy',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString(),
-        mongodb: 'connected'
-    });
-});
-
 // 404 Handler
 app.use((req: Request, res: Response) => {
     res.status(404).json({

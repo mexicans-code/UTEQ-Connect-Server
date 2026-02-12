@@ -1,208 +1,464 @@
 import { Request, Response } from 'express';
-import * as userService from './user.service.js';
+import bcrypt from 'bcryptjs';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import User from './user.model.js';
 
-export const getUsers = async (req: Request, res: Response) => {
+/**
+ * Registrar un nuevo usuario
+ */
+export const registerUser = async (req: Request, res: Response) => {
   try {
-    const users = await userService.findAllUsers();
-    res.json({ 
-      success: true,
-      data: users 
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido' 
-    });
-  }
-};
+    const { nombre, email, password } = req.body;
 
-export const getUserById = async (req: Request, res: Response) => {
-  try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const user = await userService.findUserById(id);
-    if (!user) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Usuario no encontrado' 
-      });
-    }
-    res.json({ 
-      success: true,
-      data: user 
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido' 
-    });
-  }
-};
-
-export const getUserByEmail = async (req: Request, res: Response) => {
-  try {
-    const email = Array.isArray(req.params.email) ? req.params.email[0] : req.params.email;
-    const user = await userService.findUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Usuario no encontrado' 
-      });
-    }
-    res.json({ 
-      success: true,
-      data: user 
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido' 
-    });
-  }
-};
-
-export const createUser = async (req: Request, res: Response) => {
-  try {
-    const user = await userService.createUser(req.body);
-    res.status(201).json({
-      success: true,
-      message: "Usuario creado exitosamente",
-      data: user
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
-    });
-  }
-};
-
-export const updateUser = async (req: Request, res: Response) => {
-  try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const user = await userService.updateUser(id, req.body);
-    if (!user) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Usuario no encontrado' 
-      });
-    }
-    res.json({
-      success: true,
-      message: "Usuario actualizado exitosamente",
-      data: user
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
-    });
-  }
-};
-
-export const deleteUser = async (req: Request, res: Response) => {
-  try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const user = await userService.deleteUser(id);
-    if (!user) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Usuario no encontrado' 
-      });
-    }
-    res.json({
-      success: true,
-      message: "Usuario eliminado exitosamente"
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
-    });
-  }
-};
-
-export const updateUltimoLogin = async (req: Request, res: Response) => {
-  try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const user = await userService.updateUltimoLogin(id);
-    if (!user) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Usuario no encontrado' 
-      });
-    }
-    res.json({
-      success: true,
-      message: "Último login actualizado",
-      data: user
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
-    });
-  }
-};
-
-export const changeStatus = async (req: Request, res: Response) => {
-  try {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { estatus } = req.body;
-    
-    if (!estatus || (estatus !== "activo" && estatus !== "inactivo")) {
+    if (!nombre || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Estatus inválido. Debe ser "activo" o "inactivo"'
+        error: 'Todos los campos son obligatorios'
       });
     }
-    
-    const user = await userService.changeUserStatus(id, estatus);
-    if (!user) {
-      return res.status(404).json({ 
+
+    if (password.length < 6) {
+      return res.status(400).json({
         success: false,
-        error: 'Usuario no encontrado' 
+        error: 'La contraseña debe tener al menos 6 caracteres'
       });
     }
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Este correo electrónico ya está registrado'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    const newUser = await User.create({
+      nombre: nombre.trim(),
+      email: email.trim().toLowerCase(),
+      passwordHash,
+      rol: 'user',
+      estatus: 'activo',
+      fechaCreacion: new Date(),
+    });
+
+    // Generar token JWT con tipos correctos
+    const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro_cambialo';
+    
+    const payload = {
+      id: newUser._id.toString(),
+      _id: newUser._id.toString(),
+      email: newUser.email,
+      rol: newUser.rol
+    };
+
+    const options: SignOptions = {
+      expiresIn: '7d' // Cambiado a string literal
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, options);
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario registrado exitosamente',
+      data: {
+        user: {
+          _id: newUser._id,
+          nombre: newUser.nombre,
+          email: newUser.email,
+          rol: newUser.rol,
+          estatus: newUser.estatus
+        },
+        token
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error en registro:', error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Este correo electrónico ya está registrado'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Error al registrar usuario'
+    });
+  }
+};
+
+/**
+ * Login de usuario
+ */
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email y contraseña son requeridos'
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Credenciales inválidas'
+      });
+    }
+
+    if (user.estatus !== 'activo') {
+      return res.status(403).json({
+        success: false,
+        error: 'Tu cuenta ha sido desactivada. Contacta al administrador.'
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Credenciales inválidas'
+      });
+    }
+
+    user.ultimoLogin = new Date();
+    await user.save();
+
+    // Generar token JWT con tipos correctos
+    const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro_cambialo';
+    
+    const payload = {
+      id: user._id.toString(),
+      _id: user._id.toString(),
+      email: user.email,
+      rol: user.rol
+    };
+
+    const options: SignOptions = {
+      expiresIn: '7d'
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, options);
+
     res.json({
       success: true,
-      message: "Estatus actualizado exitosamente",
+      message: 'Login exitoso',
+      data: {
+        user: {
+          _id: user._id,
+          nombre: user.nombre,
+          email: user.email,
+          rol: user.rol,
+          estatus: user.estatus,
+          ultimoLogin: user.ultimoLogin
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en login:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al iniciar sesión'
+    });
+  }
+};
+
+/**
+ * Obtener perfil del usuario autenticado
+ */
+export const getProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+
+    const user = await User.findById(userId).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
       data: user
     });
+
   } catch (error) {
-    res.status(400).json({
+    console.error('Error obteniendo perfil:', error);
+    res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      error: 'Error al obtener perfil'
     });
   }
 };
 
-export const getUsersByRol = async (req: Request, res: Response) => {
+/**
+ * Obtener todos los usuarios (solo admin)
+ */
+export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const rol = Array.isArray(req.params.rol) ? req.params.rol[0] : req.params.rol;
-    const users = await userService.findUsersByRol(rol);
-    res.json({ 
+    const users = await User.find().select('-passwordHash').sort({ fechaCreacion: -1 });
+
+    res.json({
       success: true,
-      data: users 
+      data: users,
+      total: users.length
     });
+
   } catch (error) {
-    res.status(500).json({ 
+    console.error('Error obteniendo usuarios:', error);
+    res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido' 
+      error: 'Error al obtener usuarios'
     });
   }
 };
 
-export const getActiveUsers = async (req: Request, res: Response) => {
+/**
+ * Obtener un usuario por ID
+ */
+export const getUserById = async (req: Request, res: Response) => {
   try {
-    const users = await userService.findActiveUsers();
-    res.json({ 
+    const userId = req.params.id;
+
+    const user = await User.findById(userId).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
       success: true,
-      data: users 
+      data: user
     });
+
   } catch (error) {
-    res.status(500).json({ 
+    console.error('Error obteniendo usuario:', error);
+    res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido' 
+      error: 'Error al obtener usuario'
+    });
+  }
+};
+
+/**
+ * Actualizar usuario
+ */
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    const { nombre, email, rol, estatus } = req.body;
+
+    const updateData: any = {};
+    if (nombre) updateData.nombre = nombre.trim();
+    if (email) updateData.email = email.trim().toLowerCase();
+    if (rol) updateData.rol = rol;
+    if (estatus) updateData.estatus = estatus;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Usuario actualizado exitosamente',
+      data: user
+    });
+
+  } catch (error: any) {
+    console.error('Error actualizando usuario:', error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Este correo electrónico ya está en uso'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Error al actualizar usuario'
+    });
+  }
+};
+
+/**
+ * Cambiar contraseña del usuario autenticado
+ */
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contraseña actual y nueva son requeridas'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'La nueva contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Contraseña actual incorrecta'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+    user.passwordHash = newPasswordHash;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Contraseña actualizada exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error cambiando contraseña:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al cambiar contraseña'
+    });
+  }
+};
+
+/**
+ * Desactivar usuario (soft delete)
+ */
+export const deactivateUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { estatus: 'inactivo' },
+      { new: true }
+    ).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Usuario desactivado exitosamente',
+      data: user
+    });
+
+  } catch (error) {
+    console.error('Error desactivando usuario:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al desactivar usuario'
+    });
+  }
+};
+
+/**
+ * Activar usuario
+ */
+export const activateUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { estatus: 'activo' },
+      { new: true }
+    ).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Usuario activado exitosamente',
+      data: user
+    });
+
+  } catch (error) {
+    console.error('Error activando usuario:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al activar usuario'
+    });
+  }
+};
+
+/**
+ * Eliminar usuario permanentemente (solo superadmin)
+ */
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+
+    const user = await User.findByIdAndDelete(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Usuario eliminado permanentemente'
+    });
+
+  } catch (error) {
+    console.error('Error eliminando usuario:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al eliminar usuario'
     });
   }
 };
