@@ -1,4 +1,5 @@
 import User from './user.model.js';
+import bcrypt from "bcryptjs";
 
 export const findAllUsers = async () => {
   try {
@@ -29,19 +30,63 @@ export const findUserByEmail = async (email: string) => {
 
 export const createUser = async (userData: any) => {
   try {
-    const user = new User(userData);
+    // Validar que se proporcione la contraseña
+    if (!userData.password) {
+      throw new Error('La contraseña es requerida');
+    }
+
+    // Validar que se proporcione el nombre
+    if (!userData.nombre) {
+      throw new Error('El nombre es requerido');
+    }
+
+    // Validar que se proporcione el email
+    if (!userData.email) {
+      throw new Error('El email es requerido');
+    }
+
+    // Verificar si el email ya existe
+    const existingUser = await User.findOne({ email: userData.email.toLowerCase() });
+    if (existingUser) {
+      throw new Error('El email ya está registrado');
+    }
+
+    // Hash de la contraseña
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    // Crear el nuevo usuario
+    const user = new User({
+      nombre: userData.nombre.trim(),
+      email: userData.email.trim().toLowerCase(),
+      passwordHash: hashedPassword,
+      rol: userData.rol || 'user', // Por defecto será 'user'
+      estatus: userData.estatus || 'activo' // Por defecto será 'activo'
+    });
+
     await user.save();
-    // Retornar usuario sin el password
+
+    // Retornar el usuario sin el password
     const userObj = user.toObject();
     const { passwordHash, ...userWithoutPassword } = userObj;
+
     return userWithoutPassword;
-  } catch (error) {
+  } catch (error: any) {
+    // Si es un error de Mongoose por email duplicado
+    if (error.code === 11000) {
+      throw new Error('El email ya está registrado');
+    }
     throw error;
   }
 };
 
 export const updateUser = async (id: string, userData: any) => {
   try {
+    // Si se está actualizando el password, hashearlo
+    if (userData.password) {
+      userData.passwordHash = await bcrypt.hash(userData.password, 10);
+      delete userData.password;
+    }
+
     const user = await User.findByIdAndUpdate(
       id,
       userData,

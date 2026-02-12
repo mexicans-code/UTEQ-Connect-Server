@@ -58,7 +58,7 @@ const EventSchema = new Schema<IEvent>({
   },
   creadoPor: {
     type: Schema.Types.ObjectId,
-    ref: "User"
+    ref: "Personal"
   },
   activo: {
     type: Boolean,

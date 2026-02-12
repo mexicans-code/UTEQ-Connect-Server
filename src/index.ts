@@ -5,6 +5,9 @@ import connectDB from './database/MongoDB.js';
 import locationRoutes from './apis/location/location.routes.js';
 import eventRoutes from './apis/event/event.routes.js';
 import userRoutes from './apis/user/user.routes.js';
+import invitationRoutes from './apis/eventInvitation/eventInvitation.routes.js';
+import personalRoutes from './apis/personal/personal.routes.js';
+import authRoutes from "./apis/auth/auth.routes.js";
 
 dotenv.config();
 
@@ -23,6 +26,9 @@ connectDB();
 app.use('/api/locations', locationRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/invitaciones', invitationRoutes);
+app.use('/api/personal', personalRoutes);
+app.use("/api/auth", authRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -35,6 +41,8 @@ app.listen(PORT, () => {
     console.log(`API Locations: http://localhost:${PORT}/api/locations`);
     console.log(`API Events: http://localhost:${PORT}/api/events`);
     console.log(`API Users: http://localhost:${PORT}/api/users`);
+    console.log(`API Invitations: http://localhost:${PORT}/api/invitaciones`);
+    console.log(`API Personal: http://localhost:${PORT}/api/personal`);
 });
 
 export default app;
