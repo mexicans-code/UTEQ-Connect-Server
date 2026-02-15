@@ -13,6 +13,7 @@ export interface IEvent extends Document {
   creadoPor?: mongoose.Types.ObjectId;
   activo: boolean;
   desactivarEn?: Date;
+  image?: string;
 }
 
 const EventSchema = new Schema<IEvent>({
@@ -66,6 +67,11 @@ const EventSchema = new Schema<IEvent>({
   },
   desactivarEn: {
     type: Date
+  },
+  image: {
+    type: String,
+    required: false,
+    trim: true
   }
 }, {
   timestamps: true,

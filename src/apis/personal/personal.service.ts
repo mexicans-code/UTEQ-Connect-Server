@@ -1,5 +1,6 @@
 import { PersonalModel, IPersonal } from "./personal.model.js";
 import axios from "axios";
+
 export const findAllPersonal = async () => {
     try {
         const personal = await PersonalModel.find().sort({ nombre: 1 });
@@ -8,6 +9,7 @@ export const findAllPersonal = async () => {
         throw new Error('Error obteniendo personal');
     }
 };
+
 export const findPersonalById = async (id: string) => {
     try {
         const personal = await PersonalModel.findById(id);
@@ -16,6 +18,7 @@ export const findPersonalById = async (id: string) => {
         throw new Error('Error obteniendo personal por ID');
     }
 };
+
 export const createPersonal = async (personalData: Partial<IPersonal>) => {
     try {
         const personal = new PersonalModel(personalData);
@@ -25,6 +28,7 @@ export const createPersonal = async (personalData: Partial<IPersonal>) => {
         throw new Error('Error creando personal');
     }
 };
+
 export const updatePersonal = async (id: string, personalData: Partial<IPersonal>) => {
     try {
         const personal = await PersonalModel.findByIdAndUpdate(
@@ -37,6 +41,7 @@ export const updatePersonal = async (id: string, personalData: Partial<IPersonal
         throw new Error('Error actualizando personal');
     }
 };
+
 export const deletePersonal = async (id: string) => {
     try {
         const personal = await PersonalModel.findByIdAndDelete(id);
@@ -45,6 +50,7 @@ export const deletePersonal = async (id: string) => {
         throw new Error('Error eliminando personal');
     }
 };
+
 export const findPersonalByDepartamento = async (departamento: string) => {
     try {
         const personal = await PersonalModel.find({ 
@@ -55,6 +61,7 @@ export const findPersonalByDepartamento = async (departamento: string) => {
         throw new Error('Error obteniendo personal por departamento');
     }
 };
+
 export const findPersonalByEstatus = async (estatus: string) => {
     try {
         const personal = await PersonalModel.find({ estatus }).sort({ nombre: 1 });
@@ -63,6 +70,7 @@ export const findPersonalByEstatus = async (estatus: string) => {
         throw new Error('Error obteniendo personal por estatus');
     }
 };
+
 export const findPersonalByNombre = async (nombre: string) => {
     try {
         const personal = await PersonalModel.find({
@@ -77,6 +85,7 @@ export const findPersonalByNombre = async (nombre: string) => {
         throw new Error('Error buscando personal por nombre');
     }
 };
+
 export const findPersonalByNumeroEmpleado = async (numeroEmpleado: string) => {
     try {
         const personal = await PersonalModel.findOne({ numeroEmpleado });
@@ -85,9 +94,9 @@ export const findPersonalByNumeroEmpleado = async (numeroEmpleado: string) => {
         throw new Error('Error buscando personal por número de empleado');
     }
 };
+
 export const findPersonalConUbicacion = async (departamento: string) => {
     try {
-        // 1. Buscar personal por departamento
         const personal = await PersonalModel.find({ 
             departamento: { $regex: departamento, $options: 'i' } 
         }).sort({ nombre: 1 });
@@ -100,7 +109,6 @@ export const findPersonalConUbicacion = async (departamento: string) => {
             };
         }
 
-        // 2. Buscar ubicación del departamento en la API de locations
         const LOCATIONS_API = process.env.LOCATIONS_API_URL || 'http://localhost:3000/api/locations';
         
         let ubicacionDepartamento = null;
@@ -108,7 +116,6 @@ export const findPersonalConUbicacion = async (departamento: string) => {
             const response = await axios.get(LOCATIONS_API);
             const locations = response.data.data || response.data;
             
-            // Buscar la ubicación que coincida con el departamento
             ubicacionDepartamento = locations.find((loc: any) => 
                 loc.nombre.toLowerCase().includes(departamento.toLowerCase())
             );
@@ -116,7 +123,6 @@ export const findPersonalConUbicacion = async (departamento: string) => {
             console.error('Error obteniendo ubicaciones:', error);
         }
 
-        // 3. Combinar datos
         return {
             departamento,
             ubicacion: ubicacionDepartamento ? {
@@ -132,7 +138,8 @@ export const findPersonalConUbicacion = async (departamento: string) => {
                 cargo: p.cargo,
                 cubiculo: p.cubiculo,
                 planta: p.planta,
-                estatus: p.estatus
+                estatus: p.estatus,
+                imagenPerfil: p.imagenPerfil
             })),
             total: personal.length
         };
@@ -141,6 +148,7 @@ export const findPersonalConUbicacion = async (departamento: string) => {
         throw new Error('Error obteniendo personal con ubicación');
     }
 };
+
 export const findProfesorConUbicacion = async (numeroEmpleado: string) => {
     try {
         const profesor = await PersonalModel.findOne({ numeroEmpleado });
@@ -174,7 +182,8 @@ export const findProfesorConUbicacion = async (numeroEmpleado: string) => {
                 cubiculo: profesor.cubiculo,
                 planta: profesor.planta,
                 fechaIngreso: profesor.fechaIngreso,
-                estatus: profesor.estatus
+                estatus: profesor.estatus,
+                imagenPerfil: profesor.imagenPerfil
             },
             ubicacion: ubicacionDepartamento ? {
                 nombre: ubicacionDepartamento.nombre,
@@ -188,6 +197,7 @@ export const findProfesorConUbicacion = async (numeroEmpleado: string) => {
         throw new Error('Error obteniendo información del profesor');
     }
 };
+
 export const buscarPersonal = async (termino: string) => {
     try {
         const personal = await PersonalModel.find({
@@ -229,6 +239,7 @@ export const buscarPersonal = async (termino: string) => {
                 departamento: p.departamento,
                 cubiculo: p.cubiculo,
                 planta: p.planta,
+                imagenPerfil: p.imagenPerfil,
                 ubicacion: ubicacion ? {
                     nombre: ubicacion.nombre,
                     coordenadas: ubicacion.posicion
@@ -242,4 +253,3 @@ export const buscarPersonal = async (termino: string) => {
         throw new Error('Error en búsqueda de personal');
     }
 };
-
