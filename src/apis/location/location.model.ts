@@ -6,6 +6,7 @@ export interface IDestino extends Document {
         latitude: number;
         longitude: number;
     };
+    image?: string;
 }
 
 const DestinoSchema = new Schema<IDestino>({
@@ -27,11 +28,15 @@ const DestinoSchema = new Schema<IDestino>({
             min: -180,
             max: 180
         }
+    },
+    image: {
+        type: String,
+        required: false,
+        trim: true
     }
 }, {
     timestamps: true,
     collection: 'destinos'
 });
-
 
 export default mongoose.model<IDestino>('Destino', DestinoSchema);

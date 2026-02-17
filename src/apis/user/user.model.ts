@@ -1,13 +1,16 @@
 import mongoose, { Schema, Document } from "mongoose";
+import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
   nombre: string;
   email: string;
   passwordHash: string;
+  imagenPerfil?: string;
   rol: "superadmin" | "admin" | "user";
   estatus: "activo" | "inactivo";
   fechaCreacion: Date;
   ultimoLogin?: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -25,7 +28,13 @@ const UserSchema = new Schema<IUser>({
   },
   passwordHash: { 
     type: String, 
-    required: true 
+    required: true,
+    select: false
+  },
+  imagenPerfil: {
+    type: String,
+    required: false,
+    default: null
   },
   rol: {
     type: String,
@@ -48,5 +57,26 @@ const UserSchema = new Schema<IUser>({
   timestamps: true,
   collection: 'users'
 });
+
+// Hash password antes de guardar
+UserSchema.pre('save', async function() {
+  if (!this.isModified('passwordHash')) {
+    return;
+  }
+  
+  const salt = await bcrypt.genSalt(10);
+  this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
+});
+
+// Método para comparar passwords
+UserSchema.methods.comparePassword = async function(
+  candidatePassword: string
+): Promise<boolean> {
+  try {
+    return await bcrypt.compare(candidatePassword, this.passwordHash);
+  } catch (error) {
+    return false;
+  }
+};
 
 export default mongoose.model<IUser>("User", UserSchema);

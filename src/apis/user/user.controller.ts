@@ -44,7 +44,6 @@ export const registerUser = async (req: Request, res: Response) => {
       fechaCreacion: new Date(),
     });
 
-    // Generar token JWT con tipos correctos
     const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro_cambialo';
     
     const payload = {
@@ -55,7 +54,7 @@ export const registerUser = async (req: Request, res: Response) => {
     };
 
     const options: SignOptions = {
-      expiresIn: '7d' // Cambiado a string literal
+      expiresIn: '7d'
     };
 
     const token = jwt.sign(payload, JWT_SECRET, options);
@@ -69,7 +68,8 @@ export const registerUser = async (req: Request, res: Response) => {
           nombre: newUser.nombre,
           email: newUser.email,
           rol: newUser.rol,
-          estatus: newUser.estatus
+          estatus: newUser.estatus,
+          imagenPerfil: newUser.imagenPerfil
         },
         token
       }
@@ -132,7 +132,6 @@ export const loginUser = async (req: Request, res: Response) => {
     user.ultimoLogin = new Date();
     await user.save();
 
-    // Generar token JWT con tipos correctos
     const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro_cambialo';
     
     const payload = {
@@ -158,7 +157,8 @@ export const loginUser = async (req: Request, res: Response) => {
           email: user.email,
           rol: user.rol,
           estatus: user.estatus,
-          ultimoLogin: user.ultimoLogin
+          ultimoLogin: user.ultimoLogin,
+          imagenPerfil: user.imagenPerfil
         },
         token
       }
@@ -459,6 +459,84 @@ export const deleteUser = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Error al eliminar usuario'
+    });
+  }
+};
+
+/**
+ * Actualizar imagen de perfil del usuario autenticado
+ */
+export const updateProfileImage = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    const { imagenPerfil } = req.body;
+
+    if (!imagenPerfil) {
+      return res.status(400).json({
+        success: false,
+        error: 'URL de imagen es requerida'
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { imagenPerfil },
+      { new: true }
+    ).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Imagen de perfil actualizada exitosamente',
+      data: user
+    });
+
+  } catch (error) {
+    console.error('Error actualizando imagen de perfil:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al actualizar imagen de perfil'
+    });
+  }
+};
+
+/**
+ * Eliminar imagen de perfil del usuario autenticado
+ */
+export const deleteProfileImage = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { imagenPerfil: null },
+      { new: true }
+    ).select('-passwordHash');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Imagen de perfil eliminada exitosamente',
+      data: user
+    });
+
+  } catch (error) {
+    console.error('Error eliminando imagen de perfil:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error al eliminar imagen de perfil'
     });
   }
 };

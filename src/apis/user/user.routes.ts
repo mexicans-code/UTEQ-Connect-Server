@@ -7,7 +7,9 @@ import {
   changePassword,
   deactivateUser,
   activateUser,
-  deleteUser
+  deleteUser,
+  updateProfileImage,
+  deleteProfileImage
 } from './user.controller.js';
 import { 
   authenticateToken, 
@@ -18,17 +20,19 @@ import {
 const router = express.Router();
 
 // ========== RUTAS PROTEGIDAS (Usuario autenticado) ==========
-router.get('/profile', authenticateToken, getProfile);                    // GET /users/profile
-router.put('/change-password', authenticateToken, changePassword);        // PUT /users/change-password
+router.get('/profile', authenticateToken, getProfile);
+router.put('/change-password', authenticateToken, changePassword);
+router.put('/profile-image', authenticateToken, updateProfileImage);
+router.delete('/profile-image', authenticateToken, deleteProfileImage);
 
 // ========== RUTAS DE ADMINISTRACIÓN (Solo admin/superadmin) ==========
-router.get('/', authenticateToken, requireAdmin, getAllUsers);            // GET /users
-router.get('/:id', authenticateToken, requireAdmin, getUserById);         // GET /users/:id
-router.put('/:id', authenticateToken, requireAdmin, updateUser);          // PUT /users/:id
-router.patch('/:id/deactivate', authenticateToken, requireAdmin, deactivateUser); // PATCH /users/:id/deactivate
-router.patch('/:id/activate', authenticateToken, requireAdmin, activateUser);     // PATCH /users/:id/activate
+router.get('/', authenticateToken, requireAdmin, getAllUsers);
+router.get('/:id', authenticateToken, requireAdmin, getUserById);
+router.put('/:id', authenticateToken, requireAdmin, updateUser);
+router.patch('/:id/deactivate', authenticateToken, requireAdmin, deactivateUser);
+router.patch('/:id/activate', authenticateToken, requireAdmin, activateUser);
 
 // ========== SOLO SUPERADMIN ==========
-router.delete('/:id', authenticateToken, requireRole('superadmin'), deleteUser);  // DELETE /users/:id
+router.delete('/:id', authenticateToken, requireRole('superadmin'), deleteUser);
 
 export default router;

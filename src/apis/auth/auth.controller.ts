@@ -36,15 +36,11 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    // Hash de la contraseña
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    // Crear nuevo usuario
+    // ✅ Crear nuevo usuario (el middleware pre('save') hasheará la contraseña automáticamente)
     const newUser = await User.create({
       nombre: nombre.trim(),
       email: email.trim().toLowerCase(),
-      passwordHash,
+      passwordHash: password,  // ← Enviar password en texto plano
       rol: 'user',
       estatus: 'activo',
       fechaCreacion: new Date(),
@@ -103,6 +99,8 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
+    console.log('🔍 Intentando login con:', email);
+
     // Validaciones
     if (!email || !password) {
       return res.status(400).json({
@@ -111,14 +109,19 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Buscar usuario
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // Buscar usuario - INCLUIR passwordHash explícitamente
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
+    
     if (!user) {
+      console.log('❌ Usuario no encontrado');
       return res.status(401).json({
         success: false,
         error: 'Credenciales inválidas'
       });
     }
+
+    console.log('✅ Usuario encontrado:', user.email);
+    console.log('🔑 passwordHash existe?', !!user.passwordHash);
 
     // Verificar si está activo
     if (user.estatus !== 'activo') {
@@ -128,8 +131,10 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    // Verificar contraseña usando el método del modelo
+    const isPasswordValid = await user.comparePassword(password);
+    console.log('🔐 Contraseña válida?', isPasswordValid);
+
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -155,6 +160,8 @@ export const login = async (req: Request, res: Response) => {
 
     const token = jwt.sign(payload, JWT_SECRET, options);
 
+    console.log('✅ Login exitoso, token generado');
+
     res.json({
       success: true,
       message: 'Login exitoso',
@@ -172,7 +179,7 @@ export const login = async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error en login:', error);
+    console.error('💥 Error en login:', error);
     res.status(500).json({
       success: false,
       error: 'Error al iniciar sesión'
