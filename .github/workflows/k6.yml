@@ -50,4 +50,4 @@ jobs:
           K6_OUT: cloud
           K6_CLOUD_TOKEN: ${{ secrets.GRAFANA_API_KEY }}
           K6_CLOUD_PROJECT_ID: ${{ secrets.GRAFANA_PROJECT_ID }}
-        run: k6 run k6-test.js
+        run: k6 cloud k6-test.js
