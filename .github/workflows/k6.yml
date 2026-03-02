@@ -30,8 +30,8 @@ jobs:
       - name: Start API
         env:
           NODE_ENV: test
-          MONGO_URI: mongodb+srv://2023171035:ofBOFh6Ux2Rj4KIS@cluster0.ugps9.mongodb.net/NovaCode?retryWrites=true&w=majority
-          JWT_SECRET: test
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           npm start &
           sleep 15
@@ -46,4 +46,7 @@ jobs:
           sudo apt-get install -y k6
 
       - name: Run k6 tests
+        env:
+          K6_OUT: cloud
+          K6_CLOUD_TOKEN: ${{ secrets.GRAFANA_API_KEY }}
         run: k6 run k6-test.js
