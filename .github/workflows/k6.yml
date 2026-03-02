@@ -24,7 +24,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build project
+        run: npm run build
+
       - name: Start API
+        env:
+          NODE_ENV: test
+          MONGO_URI: mongodb+srv://2023171035:ofBOFh6Ux2Rj4KIS@cluster0.ugps9.mongodb.net/NovaCode?retryWrites=true&w=majority
+          JWT_SECRET: test
         run: |
           npm start &
           sleep 15
