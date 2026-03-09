@@ -1,11 +1,30 @@
 import Destino from './location.model.js';
+import Espacio from '../space/Espacio.model.js';
 import fs from 'fs';
 import path from 'path';
+
+// ─── Helper: adjunta los espacios de cada destino ────────────────────────────
+// Los espacios son una colección separada que referencia al destino por ObjectId,
+// NO son un array embebido en Destino, por eso se hace un lookup manual.
+const attachEspacios = async (destinos: any[]) => {
+    if (destinos.length === 0) return destinos;
+
+    const ids = destinos.map(d => (d._id ?? d.id).toString());
+    const espacios = await Espacio.find({ destino: { $in: ids } }).lean();
+
+    return destinos.map(d => {
+        const plain = d.toObject ? d.toObject() : { ...d };
+        plain.espacios = espacios.filter(
+            e => e.destino.toString() === (plain._id ?? plain.id).toString()
+        );
+        return plain;
+    });
+};
 
 export const findAllDestinos = async () => {
     try {
         const destinos = await Destino.find();
-        return destinos;
+        return await attachEspacios(destinos);
     } catch (error) {
         throw new Error('Error obteniendo destinos');
     }
@@ -14,13 +33,19 @@ export const findAllDestinos = async () => {
 export const findDestinoById = async (id: string) => {
     try {
         const destino = await Destino.findById(id);
-        return destino;
+        if (!destino) return null;
+        const [result] = await attachEspacios([destino]);
+        return result;
     } catch (error) {
         throw new Error('Error obteniendo destino');
     }
 };
 
-export const createDestino = async (data: { nombre: string; posicion: { latitude: number; longitude: number }; image?: string }) => {
+export const createDestino = async (data: {
+    nombre: string;
+    posicion: { latitude: number; longitude: number };
+    image?: string;
+}) => {
     try {
         const destino = new Destino(data);
         await destino.save();
@@ -30,10 +55,12 @@ export const createDestino = async (data: { nombre: string; posicion: { latitude
     }
 };
 
-export const updateDestino = async (id: string, data: Partial<{ nombre: string; posicion: { latitude: number; longitude: number }; image?: string }>) => {
+export const updateDestino = async (
+    id: string,
+    data: Partial<{ nombre: string; posicion: { latitude: number; longitude: number }; image: string }>
+) => {
     try {
-        const destino = await Destino.findByIdAndUpdate(id, data, { new: true });
-        return destino;
+        return await Destino.findByIdAndUpdate(id, data, { new: true });
     } catch (error) {
         throw new Error('Error actualizando destino');
     }
@@ -42,14 +69,10 @@ export const updateDestino = async (id: string, data: Partial<{ nombre: string; 
 export const deleteDestino = async (id: string) => {
     try {
         const destino = await Destino.findById(id);
-        
         if (destino?.image) {
             const imagePath = path.join(process.cwd(), destino.image);
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
-            }
+            if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
         }
-        
         await Destino.findByIdAndDelete(id);
         return destino;
     } catch (error) {
@@ -60,20 +83,11 @@ export const deleteDestino = async (id: string) => {
 export const updateDestinoImage = async (id: string, imagePath: string) => {
     try {
         const oldDestino = await Destino.findById(id);
-        
         if (oldDestino?.image) {
-            const oldImagePath = path.join(process.cwd(), oldDestino.image);
-            if (fs.existsSync(oldImagePath)) {
-                fs.unlinkSync(oldImagePath);
-            }
+            const oldPath = path.join(process.cwd(), oldDestino.image);
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         }
-        
-        const destino = await Destino.findByIdAndUpdate(
-            id,
-            { image: imagePath },
-            { new: true }
-        );
-        return destino;
+        return await Destino.findByIdAndUpdate(id, { image: imagePath }, { new: true });
     } catch (error) {
         throw new Error('Error actualizando imagen del destino');
     }
@@ -82,17 +96,12 @@ export const updateDestinoImage = async (id: string, imagePath: string) => {
 export const deleteDestinoImage = async (id: string) => {
     try {
         const destino = await Destino.findById(id);
-        
         if (destino?.image) {
-            const imagePath = path.join(process.cwd(), destino.image);
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
-            }
-            
+            const imgPath = path.join(process.cwd(), destino.image);
+            if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
             destino.image = undefined;
             await destino.save();
         }
-        
         return destino;
     } catch (error) {
         throw new Error('Error eliminando imagen del destino');

@@ -8,6 +8,7 @@ export interface IEvent extends Document {
   horaInicio: string;
   horaFin: string;
   destino: mongoose.Types.ObjectId;
+  espacio?: mongoose.Types.ObjectId;
   cupos: number;
   cuposDisponibles: number;
   creadoPor?: mongoose.Types.ObjectId;
@@ -46,6 +47,11 @@ const EventSchema = new Schema<IEvent>({
     type: Schema.Types.ObjectId,
     ref: "Destino",
     required: [true, "El destino es requerido"]
+  },
+  espacio: {
+    type: Schema.Types.ObjectId,
+    ref: "Espacio",
+    required: false
   },
   cupos: {
     type: Number,

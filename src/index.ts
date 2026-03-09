@@ -11,6 +11,7 @@ import invitationRoutes from './apis/eventInvitation/eventInvitation.routes.js';
 import personalRoutes from './apis/personal/personal.routes.js';
 import authRoutes from "./apis/auth/auth.routes.js";
 import { deactivateExpiredEvents } from './apis/event/event.service.js';
+import espacioRoutes from "./apis/space/Espacio.routes.js";
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/invitaciones', invitationRoutes);
 app.use('/api/personal', personalRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/espacios", espacioRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
