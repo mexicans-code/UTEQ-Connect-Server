@@ -15,6 +15,7 @@ router.get("/destino/:destinoId", espacioController.getEspaciosByDestino);
 // GET /api/espacios/destino/:destinoId/disponibles
 router.get("/destino/:destinoId/disponibles", espacioController.getEspaciosDisponiblesByDestino);
 
+
 // POST /api/espacios
 router.post("/", espacioController.createEspacio);
 

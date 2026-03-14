@@ -12,6 +12,7 @@ import personalRoutes from './apis/personal/personal.routes.js';
 import authRoutes from "./apis/auth/auth.routes.js";
 import { deactivateExpiredEvents } from './apis/event/event.service.js';
 import espacioRoutes from "./apis/space/Espacio.routes.js";
+import mostVisitedRoutes from "./apis/most_visited/most_visited.route.js";
 
 dotenv.config();
 
@@ -65,6 +66,7 @@ app.use('/api/invitaciones', invitationRoutes);
 app.use('/api/personal', personalRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/espacios", espacioRoutes);
+app.use("/api/most-visited", mostVisitedRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -81,6 +83,7 @@ app.listen(PORT, () => {
     console.log(`API Users: http://localhost:${PORT}/api/users`);
     console.log(`API Invitations: http://localhost:${PORT}/api/invitaciones`);
     console.log(`API Personal: http://localhost:${PORT}/api/personal`);
+    console.log(`API Most Visited: http://localhost:${PORT}/api/most-visited`);
 });
 
 export default app;

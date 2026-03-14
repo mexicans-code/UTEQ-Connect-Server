@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-export const authenticateToken = async (
+export const authenticateToken = async (  
   req: Request,
   res: Response,
   next: NextFunction
@@ -33,7 +33,7 @@ export const authenticateToken = async (
     }
 
     const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro_cambialo';
-    
+
     jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
       if (err) {
         if (err.name === 'TokenExpiredError') {
