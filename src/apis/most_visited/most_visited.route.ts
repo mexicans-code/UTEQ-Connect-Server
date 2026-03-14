@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { findAllMostvisited } from './most_visited.service.js';
+import { getMostVisited } from './most_visited.controller.js';
 
 const router = Router();
 
-router.get('/', findAllMostvisited);
+router.get('/', getMostVisited);
 
 export default router;

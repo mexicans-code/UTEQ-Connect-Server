@@ -1,11 +1,11 @@
+import { Request, Response } from 'express';
+import { findAllMostvisited } from './most_visited.service.js';
 
-import { findAllMostvisited } from "./most_visited.service.js";
-
-export const getMostVisited = async () => {
+export const getMostVisited = async (req: Request, res: Response) => {
     try {
         const mostVisiteds = await findAllMostvisited();
-        return mostVisiteds;
+        res.json(mostVisiteds);
     } catch (error) {
-        throw new Error('Error obteniendo los más visitados');
+        res.status(500).json({ message: 'Error obteniendo los más visitados' });
     }
 };
