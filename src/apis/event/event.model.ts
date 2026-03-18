@@ -3,12 +3,11 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IEvent extends Document {
   titulo: string;
   descripcion?: string;
-  fechaInicio: Date;
-  fechaFin: Date;
+  fecha: Date;
   horaInicio: string;
   horaFin: string;
   destino: mongoose.Types.ObjectId;
-  espacio?: mongoose.Types.ObjectId;
+  espacio: mongoose.Types.ObjectId;
   cupos: number;
   cuposDisponibles: number;
   creadoPor?: mongoose.Types.ObjectId;
@@ -27,13 +26,9 @@ const EventSchema = new Schema<IEvent>({
     type: String,
     trim: true
   },
-  fechaInicio: {
+  fecha: {
     type: Date,
-    required: [true, "La fecha de inicio es requerida"]
-  },
-  fechaFin: {
-    type: Date,
-    required: [true, "La fecha de fin es requerida"]
+    required: [true, "La fecha es requerida"]
   },
   horaInicio: {
     type: String,
@@ -51,7 +46,8 @@ const EventSchema = new Schema<IEvent>({
   espacio: {
     type: Schema.Types.ObjectId,
     ref: "Espacio",
-    required: false
+    required: false,
+    default: null
   },
   cupos: {
     type: Number,
@@ -65,7 +61,7 @@ const EventSchema = new Schema<IEvent>({
   },
   creadoPor: {
     type: Schema.Types.ObjectId,
-    ref: "Personal"
+    ref: "User"
   },
   activo: {
     type: Boolean,

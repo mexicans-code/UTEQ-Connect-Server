@@ -3,9 +3,6 @@ import Espacio from '../space/Espacio.model.js';
 import fs from 'fs';
 import path from 'path';
 
-// ─── Helper: adjunta los espacios de cada destino ────────────────────────────
-// Los espacios son una colección separada que referencia al destino por ObjectId,
-// NO son un array embebido en Destino, por eso se hace un lookup manual.
 const attachEspacios = async (destinos: any[]) => {
     if (destinos.length === 0) return destinos;
 

@@ -36,7 +36,6 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ Crear nuevo usuario (el middleware pre('save') hasheará la contraseña automáticamente)
     const newUser = await User.create({
       nombre: nombre.trim(),
       email: email.trim().toLowerCase(),
