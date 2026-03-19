@@ -3,33 +3,33 @@ import dotenv from 'dotenv';
 dotenv.config();
 // ─── Transporter Gmail ────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-    },
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
 });
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('es-MX', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
 });
 const formatDateRange = (start, end) => {
-    const sDay = new Date(start).toISOString().substring(0, 10);
-    const eDay = new Date(end).toISOString().substring(0, 10);
-    return sDay === eDay ? formatDate(start) : `${formatDate(start)} al ${formatDate(end)}`;
+  const sDay = new Date(start).toISOString().substring(0, 10);
+  const eDay = new Date(end).toISOString().substring(0, 10);
+  return sDay === eDay ? formatDate(start) : `${formatDate(start)} al ${formatDate(end)}`;
 };
 const getDestinoNombre = (d) => typeof d === 'object' ? d.nombre : 'Campus UTEQ';
 const getEspacioNombre = (e) => {
-    if (!e || typeof e === 'string')
-        return null;
-    return `${e.nombre}${e.planta ? ` · Planta ${e.planta}` : ''}`;
+  if (!e || typeof e === 'string')
+    return null;
+  return `${e.nombre}${e.planta ? ` · Planta ${e.planta}` : ''}`;
 };
 // ─── Correo de confirmación de registro ──────────────────────────────────────
 export const sendConfirmationEmail = async (usuario, evento, token) => {
-    const espacio = getEspacioNombre(evento.espacio);
-    const destino = getDestinoNombre(evento.destino);
-    const fecha = formatDateRange(evento.fechaInicio, evento.fechaFin);
-    const espacioRow = espacio ? `
+  const espacio = getEspacioNombre(evento.espacio);
+  const destino = getDestinoNombre(evento.destino);
+  const fecha = formatDateRange(evento.fechaInicio, evento.fechaFin);
+  const espacioRow = espacio ? `
               <tr>
                 <td style="padding:8px 0;vertical-align:top;"><span style="font-size:15px;"></span></td>
                 <td style="padding:8px 0 8px 12px;">
@@ -37,7 +37,7 @@ export const sendConfirmationEmail = async (usuario, evento, token) => {
                   <span style="font-size:14px;font-weight:600;color:#202124;">${espacio}</span>
                 </td>
               </tr>` : '';
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
@@ -138,11 +138,11 @@ export const sendConfirmationEmail = async (usuario, evento, token) => {
 </table>
 </body>
 </html>`;
-    await transporter.sendMail({
-        from: `"UTEQ Connect" <${process.env.GMAIL_USER}>`,
-        to: usuario.email,
-        subject: `🎟️ Tu registro está confirmado: ${evento.titulo}`,
-        html,
-    });
+  await transporter.sendMail({
+    from: `"UTEQ Connect" <${process.env.GMAIL_USER}>`,
+    to: usuario.email,
+    subject: `🎟️ Tu registro está confirmado: ${evento.titulo}`,
+    html,
+  });
 };
 export default transporter;
