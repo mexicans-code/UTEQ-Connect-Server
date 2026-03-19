@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro_cambialo';
  */
 export const register = async (req: Request, res: Response) => {
   try {
-    const { nombre, email, password } = req.body;
+    const { nombre, email, password, matricula, carrera, tipoUsuario } = req.body;
 
     // Validaciones
     if (!nombre || !email || !password) {
@@ -23,7 +23,7 @@ export const register = async (req: Request, res: Response) => {
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        error: 'La contraseña debe tener al menos 6 caracteres'
+        error: 'La contraseÃ±a debe tener al menos 6 caracteres'
       });
     }
 
@@ -32,14 +32,17 @@ export const register = async (req: Request, res: Response) => {
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        error: 'Este correo electrónico ya está registrado'
+        error: 'Este correo electrÃ³nico ya estÃ¡ registrado'
       });
     }
 
     const newUser = await User.create({
       nombre: nombre.trim(),
       email: email.trim().toLowerCase(),
-      passwordHash: password,  // ← Enviar password en texto plano
+      passwordHash: password,  // â† Enviar password en texto plano
+      matricula: matricula || null,
+      carrera: carrera || null,
+      tipoUsuario: tipoUsuario || null,
       rol: 'user',
       estatus: 'activo',
       fechaCreacion: new Date(),
@@ -68,7 +71,11 @@ export const register = async (req: Request, res: Response) => {
           nombre: newUser.nombre,
           email: newUser.email,
           rol: newUser.rol,
-          estatus: newUser.estatus
+          estatus: newUser.estatus,
+          imagenPerfil: newUser.imagenPerfil,
+          matricula: newUser.matricula,
+          carrera: newUser.carrera,
+          tipoUsuario: newUser.tipoUsuario
         },
         token
       }
@@ -80,7 +87,7 @@ export const register = async (req: Request, res: Response) => {
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        error: 'Este correo electrónico ya está registrado'
+        error: 'Este correo electrÃ³nico ya estÃ¡ registrado'
       });
     }
 
@@ -98,31 +105,31 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    console.log('🔍 Intentando login con:', email);
+    console.log('ðŸ” Intentando login con:', email);
 
     // Validaciones
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Email y contraseña son requeridos'
+        error: 'Email y contraseÃ±a son requeridos'
       });
     }
 
-    // Buscar usuario - INCLUIR passwordHash explícitamente
+    // Buscar usuario - INCLUIR passwordHash explÃ­citamente
     const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
     
     if (!user) {
-      console.log('❌ Usuario no encontrado');
+      console.log('âŒ Usuario no encontrado');
       return res.status(401).json({
         success: false,
-        error: 'Credenciales inválidas'
+        error: 'Credenciales invÃ¡lidas'
       });
     }
 
-    console.log('✅ Usuario encontrado:', user.email);
-    console.log('🔑 passwordHash existe?', !!user.passwordHash);
+    console.log('âœ… Usuario encontrado:', user.email);
+    console.log('ðŸ”‘ passwordHash existe?', !!user.passwordHash);
 
-    // Verificar si está activo
+    // Verificar si estÃ¡ activo
     if (user.estatus !== 'activo') {
       return res.status(403).json({
         success: false,
@@ -130,18 +137,18 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // Verificar contraseña usando el método del modelo
+    // Verificar contraseÃ±a usando el mÃ©todo del modelo
     const isPasswordValid = await user.comparePassword(password);
-    console.log('🔐 Contraseña válida?', isPasswordValid);
+    console.log('ðŸ” ContraseÃ±a vÃ¡lida?', isPasswordValid);
 
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: 'Credenciales inválidas'
+        error: 'Credenciales invÃ¡lidas'
       });
     }
 
-    // Actualizar último login
+    // Actualizar Ãºltimo login
     user.ultimoLogin = new Date();
     await user.save();
 
@@ -159,7 +166,7 @@ export const login = async (req: Request, res: Response) => {
 
     const token = jwt.sign(payload, JWT_SECRET, options);
 
-    console.log('✅ Login exitoso, token generado');
+    console.log('âœ… Login exitoso, token generado');
 
     res.json({
       success: true,
@@ -171,17 +178,21 @@ export const login = async (req: Request, res: Response) => {
           email: user.email,
           rol: user.rol,
           estatus: user.estatus,
-          ultimoLogin: user.ultimoLogin
+          ultimoLogin: user.ultimoLogin,
+          imagenPerfil: user.imagenPerfil,
+          matricula: user.matricula,
+          carrera: user.carrera,
+          tipoUsuario: user.tipoUsuario
         },
         token
       }
     });
 
   } catch (error) {
-    console.error('💥 Error en login:', error);
+    console.error('ðŸ’¥ Error en login:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al iniciar sesión'
+      error: 'Error al iniciar sesiÃ³n'
     });
   }
 };
