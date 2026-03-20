@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as espacioService from "./Espacio.service.js";
+import * as espacioService from "./Espacio.service";
 
 export const getEspacios = async (req: Request, res: Response) => {
     try {

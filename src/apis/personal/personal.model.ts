@@ -7,7 +7,6 @@ export interface IPersonal extends Document {
   apellidoPaterno: string;
   apellidoMaterno: string;
   email: string;
-  password: string;
   imagenPerfil?: string;
   telefono: string;
   departamento: string;
@@ -35,7 +34,6 @@ const PersonalSchema = new Schema<IPersonal>(
       lowercase: true, 
       trim: true 
     },
-    password: { type: String, required: true, select: false },
     imagenPerfil: {
       type: String,
       required: false,
@@ -71,7 +69,6 @@ PersonalSchema.pre('save', async function() {
   }
   
   const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Método para comparar passwords

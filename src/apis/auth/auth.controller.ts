@@ -92,6 +92,83 @@ export const register = async (req: Request, res: Response) => {
 };
 
 /**
+ * Registrar admin o superadmin con rol específico
+ * POST /auth/register-admin
+ * Body: { nombre, email, password, rol: 'admin' | 'superadmin' | 'user' }
+ */
+export const registerAdmin = async (req: Request, res: Response) => {
+  try {
+    const { nombre, email, password, rol } = req.body;
+
+    if (!nombre || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Todos los campos son obligatorios'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'La contraseña debe tener al menos 6 caracteres'
+      });
+    }
+
+    // Validar que el rol sea válido
+    const rolesPermitidos = ['user', 'admin', 'superadmin'];
+    const rolFinal = rolesPermitidos.includes(rol) ? rol : 'user';
+
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Este correo electrónico ya está registrado'
+      });
+    }
+
+    const newUser = await User.create({
+      nombre: nombre.trim(),
+      email: email.trim().toLowerCase(),
+      passwordHash: password,
+      rol: rolFinal,  // ← rol que llegó en el body
+      estatus: 'activo',
+      fechaCreacion: new Date(),
+    });
+
+    const payload = {
+      id: newUser._id.toString(),
+      _id: newUser._id.toString(),
+      email: newUser.email,
+      rol: newUser.rol
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' } as SignOptions);
+
+    res.status(201).json({
+      success: true,
+      message: `${rolFinal === 'superadmin' ? 'SuperAdmin' : rolFinal === 'admin' ? 'Admin' : 'Usuario'} registrado exitosamente`,
+      data: {
+        user: {
+          _id: newUser._id,
+          nombre: newUser.nombre,
+          email: newUser.email,
+          rol: newUser.rol,
+          estatus: newUser.estatus
+        },
+        token
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error en registro admin:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, error: 'Este correo electrónico ya está registrado' });
+    }
+    res.status(500).json({ success: false, error: 'Error al registrar administrador' });
+  }
+};
+
+/**
  * Login de usuario
  */
 export const login = async (req: Request, res: Response) => {

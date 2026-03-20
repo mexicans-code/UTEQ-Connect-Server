@@ -10,9 +10,8 @@ import userRoutes from './apis/user/user.routes.js';
 import invitationRoutes from './apis/eventInvitation/eventInvitation.routes.js';
 import personalRoutes from './apis/personal/personal.routes.js';
 import authRoutes from "./apis/auth/auth.routes.js";
-import { deactivateExpiredEvents } from './apis/event/event.service.js';
 import espacioRoutes from "./apis/space/Espacio.routes.js";
-import mostVisitedRoutes from "./apis/most_visited/most_visited.route.js";
+import { deactivateExpiredEvents } from './apis/event/event.service.js';
 
 dotenv.config();
 
@@ -41,6 +40,7 @@ if (!fs.existsSync(uploadsEvents)) {
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/api/espacios", espacioRoutes);
 
 // SERVIR ARCHIVOS ESTÁTICOS (antes de las rutas)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -65,8 +65,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/invitaciones', invitationRoutes);
 app.use('/api/personal', personalRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/espacios", espacioRoutes);
-app.use("/api/most-visited", mostVisitedRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -83,7 +81,7 @@ app.listen(PORT, () => {
     console.log(`API Users: http://localhost:${PORT}/api/users`);
     console.log(`API Invitations: http://localhost:${PORT}/api/invitaciones`);
     console.log(`API Personal: http://localhost:${PORT}/api/personal`);
-    console.log(`API Most Visited: http://localhost:${PORT}/api/most-visited`);
+    console.log(`API Espacios: http://localhost:${PORT}/api/espacios`);
 });
 
 export default app;

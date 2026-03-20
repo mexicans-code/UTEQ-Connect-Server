@@ -77,9 +77,9 @@ export const checkEventConflicts = async (eventData: any, eventId?: string) => {
   // Conflicto de SALA (duro): mismo espacio
   const conflictoSala = eventData.espacio
     ? conTraslape.find(ev => {
-      const salaEv = ev.espacio?._id?.toString() || ev.espacio?.toString();
-      return salaEv && salaEv === eventData.espacio.toString();
-    })
+        const salaEv = ev.espacio?._id?.toString() || ev.espacio?.toString();
+        return salaEv && salaEv === eventData.espacio.toString();
+      })
     : null;
 
   // Conflicto de LUGAR (blando/info): mismo destino, sala distinta
@@ -124,10 +124,10 @@ export const createEvent = async (eventData: any) => {
       if (conflictoSala) {
         throw new Error(
           `CONFLICT_SALA::${JSON.stringify({
-            id: conflictoSala._id,
-            titulo: conflictoSala.titulo,
+            id:         conflictoSala._id,
+            titulo:     conflictoSala.titulo,
             horaInicio: conflictoSala.horaInicio,
-            horaFin: conflictoSala.horaFin,
+            horaFin:    conflictoSala.horaFin,
           })}`
         );
       }
@@ -154,7 +154,7 @@ export const createEvent = async (eventData: any) => {
 export const updateEvent = async (id: string, eventData: any) => {
   try {
     if (eventData.cuposDisponibles !== undefined && eventData.cupos !== undefined &&
-      eventData.cuposDisponibles > eventData.cupos)
+        eventData.cuposDisponibles > eventData.cupos)
       throw new Error("Los cupos disponibles no pueden ser mayores que los cupos totales");
 
     // Validar que la nueva fecha/hora no sea pasada
@@ -177,27 +177,27 @@ export const updateEvent = async (id: string, eventData: any) => {
     }
 
     if (!eventData.forzar &&
-      (eventData.fecha || eventData.fechaInicio || eventData.horaInicio ||
-        eventData.horaFin || eventData.destino || eventData.espacio)) {
+        (eventData.fecha || eventData.fechaInicio || eventData.horaInicio ||
+         eventData.horaFin || eventData.destino || eventData.espacio)) {
       const existingEvent = await Event.findById(id);
       if (!existingEvent) throw new Error("Evento no encontrado");
 
       const dataToCheck = {
-        fecha: eventData.fecha || eventData.fechaInicio || existingEvent.fecha,
+        fecha:      eventData.fecha      || eventData.fechaInicio || existingEvent.fecha,
         horaInicio: eventData.horaInicio || existingEvent.horaInicio,
-        horaFin: eventData.horaFin || existingEvent.horaFin,
-        destino: eventData.destino || existingEvent.destino,
-        espacio: eventData.espacio || existingEvent.espacio,
+        horaFin:    eventData.horaFin    || existingEvent.horaFin,
+        destino:    eventData.destino    || existingEvent.destino,
+        espacio:    eventData.espacio    || existingEvent.espacio,
       };
 
       const { conflictoSala } = await checkEventConflicts(dataToCheck, id);
       if (conflictoSala) {
         throw new Error(
           `CONFLICT_SALA::${JSON.stringify({
-            id: conflictoSala._id,
-            titulo: conflictoSala.titulo,
+            id:         conflictoSala._id,
+            titulo:     conflictoSala.titulo,
             horaInicio: conflictoSala.horaInicio,
-            horaFin: conflictoSala.horaFin,
+            horaFin:    conflictoSala.horaFin,
           })}`
         );
       }
