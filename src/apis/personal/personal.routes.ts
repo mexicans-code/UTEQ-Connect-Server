@@ -10,17 +10,11 @@ import {
     getPersonalConUbicacion,
     getProfesorConUbicacion,
     searchPersonal,
-    hashExistingPassword,
-    hashAllPasswords,
     updatePersonalProfileImage,
     deletePersonalProfileImage
 } from './personal.controller.js';
 
 const router = Router();
-
-// Rutas para hashear passwords (colócalas antes de las rutas con parámetros)
-router.post('/hash-password', hashExistingPassword);
-router.post('/hash-all-passwords', hashAllPasswords);
 
 // Rutas de búsqueda
 router.get('/buscar', searchPersonal);

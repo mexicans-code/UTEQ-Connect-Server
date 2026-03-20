@@ -25,7 +25,15 @@ export const createPersonal = async (personalData) => {
         return personal;
     }
     catch (error) {
-        throw new Error('Error creando personal');
+        if (error.name === 'ValidationError') {
+            const fields = Object.keys(error.errors).join(', ');
+            throw new Error(`Validación fallida en: ${fields} — ${error.message}`);
+        }
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern || {})[0] || 'campo';
+            throw new Error(`Ya existe un registro con ese ${field}`);
+        }
+        throw error; // ← propaga el error real
     }
 };
 export const updatePersonal = async (id, personalData) => {

@@ -1,9 +1,5 @@
-import bcrypt from 'bcryptjs';
 import { findAllPersonal, findPersonalById, createPersonal, updatePersonal, deletePersonal, findPersonalByDepartamento, findPersonalByEstatus, findPersonalConUbicacion, findProfesorConUbicacion, buscarPersonal } from './personal.service.js';
 import { PersonalModel } from './personal.model.js';
-/**
- * Obtener todo el personal
- */
 export const getAllPersonal = async (req, res) => {
     try {
         const personal = await findAllPersonal();
@@ -21,9 +17,6 @@ export const getAllPersonal = async (req, res) => {
         });
     }
 };
-/**
- * Obtener personal por ID
- */
 export const getPersonalById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -53,9 +46,6 @@ export const getPersonalById = async (req, res) => {
         });
     }
 };
-/**
- * Crear nuevo personal
- */
 export const createNewPersonal = async (req, res) => {
     try {
         const personalData = req.body;
@@ -74,9 +64,6 @@ export const createNewPersonal = async (req, res) => {
         });
     }
 };
-/**
- * Actualizar personal
- */
 export const updatePersonalById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -108,9 +95,6 @@ export const updatePersonalById = async (req, res) => {
         });
     }
 };
-/**
- * Eliminar personal
- */
 export const deletePersonalById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -141,9 +125,6 @@ export const deletePersonalById = async (req, res) => {
         });
     }
 };
-/**
- * Obtener personal por departamento
- */
 export const getPersonalByDepartamento = async (req, res) => {
     try {
         const { departamento } = req.params;
@@ -168,9 +149,6 @@ export const getPersonalByDepartamento = async (req, res) => {
         });
     }
 };
-/**
- * Obtener personal por estatus
- */
 export const getPersonalByEstatus = async (req, res) => {
     try {
         const { estatus } = req.params;
@@ -218,9 +196,6 @@ export const getPersonalConUbicacion = async (req, res) => {
         });
     }
 };
-/**
- * Obtener información de un profesor con su ubicación
- */
 export const getProfesorConUbicacion = async (req, res) => {
     try {
         const { numeroEmpleado } = req.params;
@@ -274,111 +249,6 @@ export const searchPersonal = async (req, res) => {
         });
     }
 };
-/**
- * Hashear password de personal existente
- */
-export const hashExistingPassword = async (req, res) => {
-    try {
-        const { numeroEmpleado, newPassword } = req.body;
-        if (!numeroEmpleado || typeof numeroEmpleado !== 'string') {
-            return res.status(400).json({
-                success: false,
-                message: 'Número de empleado es requerido'
-            });
-        }
-        if (!newPassword || typeof newPassword !== 'string') {
-            return res.status(400).json({
-                success: false,
-                message: 'Nueva contraseña es requerida'
-            });
-        }
-        if (newPassword.length < 6) {
-            return res.status(400).json({
-                success: false,
-                message: 'La contraseña debe tener al menos 6 caracteres'
-            });
-        }
-        const personal = await PersonalModel.findOne({ numeroEmpleado }).select('+password');
-        if (!personal) {
-            return res.status(404).json({
-                success: false,
-                message: 'Personal no encontrado'
-            });
-        }
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-        personal.password = hashedPassword;
-        await personal.save();
-        res.status(200).json({
-            success: true,
-            message: 'Contraseña actualizada y hasheada exitosamente',
-            data: {
-                numeroEmpleado: personal.numeroEmpleado,
-                email: personal.email,
-                nombre: `${personal.nombre} ${personal.apellidoPaterno} ${personal.apellidoMaterno}`
-            }
-        });
-    }
-    catch (error) {
-        console.error('Error al hashear password:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al actualizar contraseña',
-            error: error.message
-        });
-    }
-};
-/**
- * Hashear todos los passwords sin hashear en la base de datos
- */
-export const hashAllPasswords = async (req, res) => {
-    try {
-        const allPersonal = await PersonalModel.find({}).select('+password');
-        let updatedCount = 0;
-        let alreadyHashedCount = 0;
-        const errors = [];
-        for (const personal of allPersonal) {
-            try {
-                if (personal.password.startsWith('$2')) {
-                    alreadyHashedCount++;
-                    continue;
-                }
-                const salt = await bcrypt.genSalt(10);
-                personal.password = await bcrypt.hash(personal.password, salt);
-                await personal.save();
-                updatedCount++;
-                console.log(`✅ Password hasheado para: ${personal.email}`);
-            }
-            catch (error) {
-                const errorMsg = `Error con ${personal.email}: ${error.message}`;
-                errors.push(errorMsg);
-                console.error(`❌ ${errorMsg}`);
-            }
-        }
-        res.status(200).json({
-            success: true,
-            message: 'Proceso de hasheo completado',
-            data: {
-                total: allPersonal.length,
-                actualizados: updatedCount,
-                yaHasheados: alreadyHashedCount,
-                errores: errors.length,
-                detalleErrores: errors
-            }
-        });
-    }
-    catch (error) {
-        console.error('Error al hashear passwords:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error al hashear passwords',
-            error: error.message
-        });
-    }
-};
-/**
- * Actualizar imagen de perfil del personal
- */
 export const updatePersonalProfileImage = async (req, res) => {
     try {
         const { id } = req.params;
@@ -416,9 +286,6 @@ export const updatePersonalProfileImage = async (req, res) => {
         });
     }
 };
-/**
- * Eliminar imagen de perfil del personal
- */
 export const deletePersonalProfileImage = async (req, res) => {
     try {
         const { id } = req.params;

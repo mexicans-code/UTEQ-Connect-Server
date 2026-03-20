@@ -1,5 +1,4 @@
 import { Schema, model, Document } from "mongoose";
-import bcrypt from 'bcryptjs';
 
 export interface IPersonal extends Document {
   numeroEmpleado: string;
@@ -18,7 +17,6 @@ export interface IPersonal extends Document {
   rol: 'admin' | 'superadmin';
   createdAt?: Date;
   updatedAt?: Date;
-  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 const PersonalSchema = new Schema<IPersonal>(
@@ -61,25 +59,5 @@ const PersonalSchema = new Schema<IPersonal>(
     collection: 'personal' 
   }
 );
-
-// Hash password antes de guardar
-PersonalSchema.pre('save', async function() {
-  if (!this.isModified('password')) {
-    return;
-  }
-  
-  const salt = await bcrypt.genSalt(10);
-});
-
-// Método para comparar passwords
-PersonalSchema.methods.comparePassword = async function(
-  candidatePassword: string
-): Promise<boolean> {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    return false;
-  }
-};
 
 export const PersonalModel = model<IPersonal>("Personal", PersonalSchema, 'personal');

@@ -9,13 +9,9 @@ const EventSchema = new Schema({
         type: String,
         trim: true
     },
-    fechaInicio: {
+    fecha: {
         type: Date,
-        required: [true, "La fecha de inicio es requerida"]
-    },
-    fechaFin: {
-        type: Date,
-        required: [true, "La fecha de fin es requerida"]
+        required: [true, "La fecha es requerida"]
     },
     horaInicio: {
         type: String,
@@ -33,7 +29,8 @@ const EventSchema = new Schema({
     espacio: {
         type: Schema.Types.ObjectId,
         ref: "Espacio",
-        required: false
+        required: false,
+        default: null
     },
     cupos: {
         type: Number,
@@ -47,7 +44,7 @@ const EventSchema = new Schema({
     },
     creadoPor: {
         type: Schema.Types.ObjectId,
-        ref: "Personal"
+        ref: "User"
     },
     activo: {
         type: Boolean,

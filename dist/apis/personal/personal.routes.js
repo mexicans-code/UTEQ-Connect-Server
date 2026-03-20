@@ -1,9 +1,6 @@
 import { Router } from 'express';
-import { getAllPersonal, getPersonalById, createNewPersonal, updatePersonalById, deletePersonalById, getPersonalByDepartamento, getPersonalByEstatus, getPersonalConUbicacion, getProfesorConUbicacion, searchPersonal, hashExistingPassword, hashAllPasswords, updatePersonalProfileImage, deletePersonalProfileImage } from './personal.controller.js';
+import { getAllPersonal, getPersonalById, createNewPersonal, updatePersonalById, deletePersonalById, getPersonalByDepartamento, getPersonalByEstatus, getPersonalConUbicacion, getProfesorConUbicacion, searchPersonal, updatePersonalProfileImage, deletePersonalProfileImage } from './personal.controller.js';
 const router = Router();
-// Rutas para hashear passwords (colócalas antes de las rutas con parámetros)
-router.post('/hash-password', hashExistingPassword);
-router.post('/hash-all-passwords', hashAllPasswords);
 // Rutas de búsqueda
 router.get('/buscar', searchPersonal);
 router.get('/departamento/:departamento', getPersonalByDepartamento);

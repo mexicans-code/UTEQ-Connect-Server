@@ -10,8 +10,8 @@ import userRoutes from './apis/user/user.routes.js';
 import invitationRoutes from './apis/eventInvitation/eventInvitation.routes.js';
 import personalRoutes from './apis/personal/personal.routes.js';
 import authRoutes from "./apis/auth/auth.routes.js";
-import { deactivateExpiredEvents } from './apis/event/event.service.js';
 import espacioRoutes from "./apis/space/Espacio.routes.js";
+import { deactivateExpiredEvents } from './apis/event/event.service.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +36,7 @@ else {
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/api/espacios", espacioRoutes);
 // SERVIR ARCHIVOS ESTÁTICOS (antes de las rutas)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 console.log('📂 Archivos estáticos configurados');
@@ -57,7 +58,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/invitaciones', invitationRoutes);
 app.use('/api/personal', personalRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/espacios", espacioRoutes);
 // Ruta de prueba
 app.get('/', (req, res) => {
     res.json({ message: 'UTEQ Connect API 🚀' });
@@ -72,5 +72,6 @@ app.listen(PORT, () => {
     console.log(`API Users: http://localhost:${PORT}/api/users`);
     console.log(`API Invitations: http://localhost:${PORT}/api/invitaciones`);
     console.log(`API Personal: http://localhost:${PORT}/api/personal`);
+    console.log(`API Espacios: http://localhost:${PORT}/api/espacios`);
 });
 export default app;
