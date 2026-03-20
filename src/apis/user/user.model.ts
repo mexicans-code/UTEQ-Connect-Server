@@ -6,6 +6,9 @@ export interface IUser extends Document {
   email: string;
   passwordHash: string;
   imagenPerfil?: string;
+  matricula?: string;
+  carrera?: string;
+  tipoUsuario?: 'alumno' | 'visitante';
   rol: "superadmin" | "admin" | "user";
   estatus: "activo" | "inactivo";
   fechaCreacion: Date;
@@ -33,6 +36,22 @@ const UserSchema = new Schema<IUser>({
   },
   imagenPerfil: {
     type: String,
+    required: false,
+    default: null
+  },
+  matricula: {
+    type: String,
+    required: false,
+    default: null
+  },
+  carrera: {
+    type: String,
+    required: false,
+    default: null
+  },
+  tipoUsuario: {
+    type: String,
+    enum: ["alumno", "visitante"],
     required: false,
     default: null
   },
