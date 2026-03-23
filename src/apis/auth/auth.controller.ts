@@ -187,7 +187,7 @@ export const login = async (req: Request, res: Response) => {
 
     // Buscar usuario - INCLUIR passwordHash explícitamente
     const user = await User.findOne({ email: email.toLowerCase() }).select('+passwordHash');
-    
+
     if (!user) {
       console.log('❌ Usuario no encontrado');
       return res.status(401).json({
