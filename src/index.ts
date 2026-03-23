@@ -13,6 +13,7 @@ import authRoutes from "./apis/auth/auth.routes.js";
 import espacioRoutes from "./apis/space/Espacio.routes.js";
 import mostVisitedRoutes from "./apis/most_visited/most_visited.route.js";
 import { deactivateExpiredEvents } from './apis/event/event.service.js';
+import graphRoutes from './apis/rutas/graph_routes.js';
 
 dotenv.config();
 
@@ -67,6 +68,7 @@ app.use('/api/invitaciones', invitationRoutes);
 app.use('/api/personal', personalRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/most-visited", mostVisitedRoutes);
+app.use('/api/grafo', graphRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
