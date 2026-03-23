@@ -262,3 +262,62 @@ export const login = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const biometricLogin = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email es requerido'
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    if (user.estatus !== 'activo') {
+      return res.status(403).json({
+        success: false,
+        error: 'Tu cuenta ha sido desactivada.'
+      });
+    }
+
+    // Generar nuevo token
+    const payload = {
+      id: user._id.toString(),
+      _id: user._id.toString(),
+      email: user.email,
+      rol: user.rol
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' } as SignOptions);
+
+    res.json({
+      success: true,
+      message: 'Login biométrico exitoso',
+      data: {
+        user: {
+          _id: user._id,
+          nombre: user.nombre,
+          email: user.email,
+          rol: user.rol,
+        },
+        token
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Error en login biométrico'
+    });
+  }
+};

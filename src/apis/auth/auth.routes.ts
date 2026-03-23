@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, registerAdmin, login } from './auth.controller.js';
+import { register, registerAdmin, login, biometricLogin } from './auth.controller.js';
 
 const router = express.Router();
 
@@ -7,6 +7,8 @@ const router = express.Router();
 router.post('/register', register);  // POST /auth/register
 router.post('/register-admin', registerAdmin);   // POST /auth/register-admin → rol: admin o superadmin
 router.post('/login', login);        // POST /auth/login
+router.post('/biometric-login', biometricLogin); // POST /auth/biometric-login
+
 
 export default router;
 
