@@ -321,3 +321,16 @@ export const biometricLogin = async (req: Request, res: Response) => {
     });
   }
 };
+
+
+export const getMe = async (req: Request, res: Response) => {
+  try {
+    const user = await User.findById(req.user?._id).select('-passwordHash');
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+    }
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Error al obtener usuario' });
+  }
+};

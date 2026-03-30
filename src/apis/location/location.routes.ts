@@ -1,5 +1,5 @@
 import * as express from 'express';
-import { 
+import {
     getLocations,
     getLocationById,
     createLocation,
