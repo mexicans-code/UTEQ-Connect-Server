@@ -20,8 +20,7 @@ import path from 'path';
 import fs from 'fs';
 dotenv.config();
 const app = express();
-const httpServer = createServer(app); // 👈
-// 👈 Inicializar socket.io
+const httpServer = createServer(app);
 export const io = new Server(httpServer, {
     cors: { origin: '*' }
 });
@@ -76,7 +75,6 @@ app.use('/api/logs', logRoutes);
 app.get('/', (req, res) => {
     res.json({ message: 'UTEQ Connect API' });
 });
-// 👈 httpServer en lugar de app.listen
 httpServer.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     console.log(`⏰ Tarea de desactivación automática de eventos: ACTIVA`);

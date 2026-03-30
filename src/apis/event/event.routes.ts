@@ -16,7 +16,6 @@ import {
   confirmAssistence
 } from './event.controller.js';
 import { upload } from '../../config/multer.config.js';
-import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
@@ -25,16 +24,16 @@ router.get('/active', getActiveEvents);
 router.get('/destino/:destinoId', getEventsByDestino);
 router.patch('/:eventoId/confirm-assistence/:userId', confirmAssistence);
 router.get('/:id', getEventById);
-router.post('/reasignar-crear', authenticateToken, reasignarYCrear);
+router.post('/reasignar-crear', reasignarYCrear);
 
-router.post('/', authenticateToken, upload.single('image'), createEvent);
-router.put('/:id', authenticateToken, upload.single('image'), updateEvent);
-router.put('/:id/reasignar-actualizar', authenticateToken, reasignarYActualizar);
+router.post('/', upload.single('image'), createEvent);
+router.put('/:id', upload.single('image'), updateEvent);
+router.put('/:id/reasignar-actualizar', reasignarYActualizar);
 
-router.delete('/:id', authenticateToken, deleteEvent);
-router.patch('/:id/deactivate', authenticateToken, deactivateEvent);
-router.patch('/:id/cupos', authenticateToken, updateCupos);
-router.post('/:id/image', authenticateToken, upload.single('image'), uploadEventImage);
-router.delete('/:id/image', authenticateToken, deleteEventImage);
+router.delete('/:id', deleteEvent);
+router.patch('/:id/deactivate', deactivateEvent);
+router.patch('/:id/cupos', updateCupos);
+router.post('/:id/image', upload.single('image'), uploadEventImage);
+router.delete('/:id/image', deleteEventImage);
 
 export default router;
