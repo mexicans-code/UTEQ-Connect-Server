@@ -406,3 +406,18 @@ export const deactivateExpiredEvents = async () => {
     throw new Error('Error desactivando eventos expirados');
   }
 };
+
+
+export const confirmAssistence = async (id: String) => {
+
+  try {
+    const assistence = await EventInvitation.findById(id);
+    if (!assistence) throw new Error("Asistencia no encontrada");
+    assistence.estadoAsistencia = "asistio";
+    await assistence.save();
+    return assistence;
+  } catch (error) {
+    console.error('Error confirmando asistencia:', error);
+    throw new Error('Error confirmando asistencia');
+  }
+}

@@ -10,7 +10,7 @@ import {
   getActiveEvents,
   getEventsByDestino,
   uploadEventImage,
-  deleteEventImage, reasignarYCrear, reasignarYActualizar
+  deleteEventImage, reasignarYCrear, reasignarYActualizar, confirmAssistence
 } from './event.controller.js';
 import { upload } from '../../config/multer.config.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
@@ -21,6 +21,7 @@ router.get('/', getEvents);
 router.get('/active', getActiveEvents);
 router.get('/destino/:destinoId', getEventsByDestino);
 router.get('/:id', getEventById);
+router.get('/:id/confirm-assistence', confirmAssistence);
 router.post('/reasignar-crear',   authenticateToken, reasignarYCrear);
  
 router.post('/', authenticateToken, upload.single('image'), createEvent);

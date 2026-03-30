@@ -41,8 +41,8 @@ const EventInvitationSchema = new Schema<IEventInvitation>({
   },
   estadoAsistencia: {
     type: String,
-    enum: ["pendiente", "asistio", "no_asistio"],
-    default: "pendiente"
+    enum: ["asistio", "no_asistio"],
+    default: null
   },
   fechaEnvio: {
     type: Date,

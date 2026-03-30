@@ -320,3 +320,16 @@ export const reasignarYActualizar = async (req: Request<{ id: string }>, res: Re
     res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Error desconocido' });
   }
 };
+
+export const confirmAssistence = async ( req: Request, res: Response ) =>{
+
+  try {
+    const {id} = req.params;
+    await eventService.confirmAssistence(id as string);
+    res.json({ succes: true, message: "Asistencia confirmada" });
+  } catch (error) {
+    console.log( "ERROR: ", error)
+    res.status(500).json({ succes: false, message: "Error al confirmar asistencia" });
+  }
+
+}
