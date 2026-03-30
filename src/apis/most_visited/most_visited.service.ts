@@ -6,18 +6,23 @@ export const findAllMostvisited = async () => {
     try {
         const mostVisiteds = await mostVisited.find().sort({ rank: 1 });
 
-        const result = await Promise.all(
-            mostVisiteds.map(async (item) => {
-                const destino = await Destino.findOne({
-                    nombre: { $regex: new RegExp(item.nombre, 'i') }
-                }).select('image');
+        // Trae todos los destinos de una sola vez en lugar de uno por uno
+        const destinos = await Destino.find().select('nombre image');
 
-                return {
-                    ...item.toObject(),
-                    image: destino?.image || null,
-                };
-            })
-        );
+        const result = mostVisiteds.map((item) => {
+            // Normaliza acentos para comparar
+            const normalize = (str: string) =>
+                str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+            const destino = destinos.find(
+                (d) => normalize(d.nombre) === normalize(item.nombre)
+            );
+
+            return {
+                ...item.toObject(),
+                image: destino?.image || null,
+            };
+        });
 
         return result;
     } catch (error) {
