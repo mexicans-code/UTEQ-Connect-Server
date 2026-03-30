@@ -292,3 +292,14 @@ export const reasignarYActualizar = async (req, res) => {
         res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Error desconocido' });
     }
 };
+export const confirmAssistence = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await eventService.confirmAssistence(id);
+        res.json({ succes: true, message: "Asistencia confirmada" });
+    }
+    catch (error) {
+        console.log("ERROR: ", error);
+        res.status(500).json({ succes: false, message: "Error al confirmar asistencia" });
+    }
+};
