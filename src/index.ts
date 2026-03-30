@@ -15,6 +15,8 @@ import mostVisitedRoutes from "./apis/most_visited/most_visited.route.js";
 import { deactivateExpiredEvents } from './apis/event/event.service.js';
 import graphRoutes from './apis/rutas/graph_routes.js';
 import { logMiddleware } from './apis/logs/log.middleware.js';
+import logRoutes from './apis/logs/log.routes.js';
+
 import path from 'path';
 import fs from 'fs';
 dotenv.config();
@@ -80,6 +82,7 @@ app.use('/api/personal', personalRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/most-visited", mostVisitedRoutes);
 app.use('/api/grafo', graphRoutes);
+app.use('/api/logs', logRoutes);
 
 app.get('/', (req, res) => {
     res.json({ message: 'UTEQ Connect API' });
