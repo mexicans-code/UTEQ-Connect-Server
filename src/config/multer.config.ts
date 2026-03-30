@@ -13,12 +13,16 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary,
     params: (req: Request, file: Express.Multer.File) => {
-        const folder = req.baseUrl.includes('/events')
-            ? 'uteq/events'
-            : 'uteq/destinos';
-
+        let folder = 'uteq/destinos';
+        const url = req.baseUrl + (req.path || '');
+        if (url.includes('/events'))   folder = 'uteq/events';
+        else if (url.includes('/espacios')) folder = 'uteq/espacios';
+        else if (url.includes('/personal')) folder = 'uteq/personal';
+        else if (url.includes('/users'))    folder = 'uteq/users';
+        else if (url.includes('/locations')) folder = 'uteq/destinos';
+ 
         const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9);
-
+ 
         return {
             folder,
             public_id: uniqueName,

@@ -1,4 +1,6 @@
 import Event from './event.model.js';
+import EspacioModel from '../space/Espacio.model.js';
+import EventInvitation from '../eventInvitation/eventInvitation.model.js';
 import fs from 'fs';
 import path from 'path';
 /* ─── helpers ─── */
@@ -69,13 +71,22 @@ export const checkEventConflicts = async (eventData, eventId) => {
 ───────────────────────────────────────────── */
 export const createEvent = async (eventData) => {
     try {
-        if (eventData.cuposDisponibles > eventData.cupos)
-            throw new Error("Los cupos disponibles no pueden ser mayores que los cupos totales");
+        // Si no se especifica cuposDisponibles, usar cupos totales (solo para almacenamiento)
+        if (eventData.cuposDisponibles === undefined) {
+            eventData.cuposDisponibles = eventData.cupos;
+        }
         // Normalizar fecha a UTC medianoche
         const fecha = new Date(eventData.fecha || eventData.fechaInicio);
         if (isNaN(fecha.getTime()))
             throw new Error('Fecha inválida');
         fecha.setUTCHours(0, 0, 0, 0);
+        // El lugar debe tener espacios (cerciorarse de que el usuario no intente crear evento en lugar sin aulas).
+        if (!eventData.forzar) {
+            const totalEspacios = await EspacioModel.countDocuments({ destino: eventData.destino });
+            if (totalEspacios === 0) {
+                throw new Error("El lugar seleccionado no tiene espacios registrados y no se puede crear el evento.");
+            }
+        }
         // Validar que la fecha no sea en el pasado (comparar solo fecha, sin hora)
         if (!eventData.forzar) {
             const hoy = new Date();
@@ -122,11 +133,16 @@ export const createEvent = async (eventData) => {
 ───────────────────────────────────────────── */
 export const updateEvent = async (id, eventData) => {
     try {
-        if (eventData.cuposDisponibles !== undefined && eventData.cupos !== undefined &&
-            eventData.cuposDisponibles > eventData.cupos)
-            throw new Error("Los cupos disponibles no pueden ser mayores que los cupos totales");
-        // Validar que la nueva fecha/hora no sea pasada
-        if (!eventData.forzar && (eventData.fecha || eventData.fechaInicio || eventData.horaInicio)) {
+        // Durante la edición “normal”, no se permite dejar un destino sin salas si no hay ningún espacio.
+        if (!eventData.forzar && eventData.destino) {
+            const totalEspacios = await EspacioModel.countDocuments({ destino: eventData.destino });
+            if (totalEspacios === 0) {
+                throw new Error("El lugar seleccionado no tiene espacios registrados y no se puede actualizar el evento.");
+            }
+        }
+        // Validar fecha/hora SOLO si se envía la flag allowPastDate=false explícitamente
+        // (por defecto al editar NO se valida fecha pasada, para permitir editar eventos existentes)
+        if (!eventData.forzar && eventData.allowPastDate === false && (eventData.fecha || eventData.fechaInicio || eventData.horaInicio)) {
             const fechaCandidata = new Date(eventData.fecha || eventData.fechaInicio);
             if (!isNaN(fechaCandidata.getTime())) {
                 fechaCandidata.setUTCHours(0, 0, 0, 0);
@@ -186,11 +202,23 @@ export const updateEvent = async (id, eventData) => {
                 }
             }
         }
+        // No se ajustan cuposDisponibles automáticamente al editar, se deja la misma lógica de visualización en frontend.
         const { forzar, fechaInicio, fechaFin, ...datos } = eventData;
-        return await Event.findByIdAndUpdate(id, datos, { new: true, runValidators: true })
+        const updatedEvent = await Event.findByIdAndUpdate(id, datos, { new: true, runValidators: true })
             .populate("destino")
             .populate("espacio")
             .populate({ path: "creadoPor", select: "nombre email rol" });
+        // Recalcular cuposDisponibles basado en invitaciones aceptadas
+        if (updatedEvent && (datos.cupos !== undefined || datos.cuposDisponibles !== undefined)) {
+            const acceptedCount = await EventInvitation.countDocuments({
+                evento: id,
+                estadoInvitacion: 'aceptada'
+            });
+            const newCuposDisponibles = updatedEvent.cupos - acceptedCount;
+            await Event.findByIdAndUpdate(id, { cuposDisponibles: newCuposDisponibles });
+            updatedEvent.cuposDisponibles = newCuposDisponibles;
+        }
+        return updatedEvent;
     }
     catch (error) {
         throw error;
@@ -199,13 +227,50 @@ export const updateEvent = async (id, eventData) => {
 /* ─────────────────────────────────────────────
    Reasignación atómica (solo superadmin)
 ───────────────────────────────────────────── */
-export const reasignarYCrear = async (eventoPrevioId, nuevaEspacioId, nuevoEventoData) => {
-    await Event.findByIdAndUpdate(eventoPrevioId, { espacio: nuevaEspacioId || null });
-    return createEvent({ ...nuevoEventoData, forzar: true });
+export const reasignarYCrear = async (eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, nuevoEventoData) => {
+    console.log('ReasignarYCrear - Parámetros recibidos:', { eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, nuevoEventoData });
+    // Actualizar el evento previo con la nueva sala y su destino correcto
+    const updatePrevio = {};
+    if (nuevaEspacioId) {
+        updatePrevio.espacio = nuevaEspacioId;
+    }
+    if (nuevaDestinoPrevioId) {
+        updatePrevio.destino = nuevaDestinoPrevioId;
+    }
+    else if (nuevaEspacioId) {
+        // Fallback: inferir destino desde el espacio
+        const nuevaSala = await EspacioModel.findById(nuevaEspacioId).lean();
+        if (nuevaSala?.destino)
+            updatePrevio.destino = nuevaSala.destino;
+    }
+    console.log('ReasignarYCrear - Datos a actualizar en evento previo:', updatePrevio);
+    await Event.findByIdAndUpdate(eventoPrevioId, updatePrevio);
+    const nuevoEvento = await createEvent({ ...nuevoEventoData, forzar: true });
+    console.log('ReasignarYCrear - Nuevo evento creado:', nuevoEvento);
+    return nuevoEvento;
 };
-export const reasignarYActualizar = async (eventoPrevioId, nuevaEspacioId, eventoActualizarId, updateData) => {
-    await Event.findByIdAndUpdate(eventoPrevioId, { espacio: nuevaEspacioId || null });
-    return updateEvent(eventoActualizarId, { ...updateData, forzar: true });
+export const reasignarYActualizar = async (eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, eventoActualizarId, updateData) => {
+    console.log('ReasignarYActualizar - Parámetros recibidos:', { eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, eventoActualizarId, updateData });
+    // Actualizar el evento previo con la nueva sala y su destino correcto
+    const updatePrevio = {};
+    if (nuevaEspacioId) {
+        updatePrevio.espacio = nuevaEspacioId;
+    }
+    if (nuevaDestinoPrevioId) {
+        // Usar el destino que calculó el frontend (más confiable)
+        updatePrevio.destino = nuevaDestinoPrevioId;
+    }
+    else if (nuevaEspacioId) {
+        // Fallback: inferir destino desde el espacio
+        const nuevaSala = await EspacioModel.findById(nuevaEspacioId).lean();
+        if (nuevaSala?.destino)
+            updatePrevio.destino = nuevaSala.destino;
+    }
+    console.log('ReasignarYActualizar - Datos a actualizar en evento previo:', updatePrevio);
+    await Event.findByIdAndUpdate(eventoPrevioId, { $set: updatePrevio }, { new: true, runValidators: true });
+    const eventoActualizado = await updateEvent(eventoActualizarId, { ...updateData, forzar: true });
+    console.log('ReasignarYActualizar - Evento actualizado:', eventoActualizado);
+    return eventoActualizado;
 };
 /* ─── Resto de funciones ─── */
 export const deleteEvent = async (id) => {
@@ -237,10 +302,6 @@ export const updateCuposDisponibles = async (id, cantidad) => {
         if (!event)
             throw new Error("Evento no encontrado");
         event.cuposDisponibles += cantidad;
-        if (event.cuposDisponibles < 0)
-            throw new Error("No hay suficientes cupos disponibles");
-        if (event.cuposDisponibles > event.cupos)
-            throw new Error("Los cupos disponibles no pueden exceder los cupos totales");
         await event.save();
         return event;
     }

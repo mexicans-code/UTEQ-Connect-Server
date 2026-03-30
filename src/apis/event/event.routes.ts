@@ -21,16 +21,16 @@ router.get('/', getEvents);
 router.get('/active', getActiveEvents);
 router.get('/destino/:destinoId', getEventsByDestino);
 router.get('/:id', getEventById);
-router.post('/reasignar-crear',   reasignarYCrear);
-
+router.post('/reasignar-crear',   authenticateToken, reasignarYCrear);
+ 
 router.post('/', authenticateToken, upload.single('image'), createEvent);
-router.put('/:id', upload.single('image'), updateEvent);
-router.put('/:id/reasignar-actualizar', reasignarYActualizar);
-
-router.delete('/:id', deleteEvent);
-router.patch('/:id/deactivate', deactivateEvent);
-router.patch('/:id/cupos', updateCupos);
-router.post('/:id/image', upload.single('image'), uploadEventImage);
-router.delete('/:id/image', deleteEventImage);
-
+router.put('/:id', authenticateToken, upload.single('image'), updateEvent);
+router.put('/:id/reasignar-actualizar', authenticateToken, reasignarYActualizar);
+ 
+router.delete('/:id', authenticateToken, deleteEvent);
+router.patch('/:id/deactivate', authenticateToken, deactivateEvent);
+router.patch('/:id/cupos', authenticateToken, updateCupos);
+router.post('/:id/image', authenticateToken, upload.single('image'), uploadEventImage);
+router.delete('/:id/image', authenticateToken, deleteEventImage);
+ 
 export default router;

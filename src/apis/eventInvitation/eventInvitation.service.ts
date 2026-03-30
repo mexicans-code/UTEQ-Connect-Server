@@ -4,16 +4,10 @@ import User from '../user/user.model.js';
 import crypto from 'crypto';
 import QRCode from 'qrcode';
 
-/**
- * Genera un token único para la invitación
- */
 const generateToken = (): string => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-/**
- * Genera un código QR en base64 a partir de un token
- */
 const generateQRCode = async (token: string): Promise<string> => {
   try {
     const qrCodeData = await QRCode.toDataURL(token, {
@@ -29,69 +23,50 @@ const generateQRCode = async (token: string): Promise<string> => {
   }
 };
 
-/**
- * Crea una invitación individual para un usuario y evento
- * Esta función se usa cuando un usuario se registra al evento
- */
-/**
- * Crea una invitación individual para un usuario y evento
- * Esta función se usa cuando un usuario se registra al evento
- */
 export const createSingleInvitation = async (
   eventoId: string,
   userId: string
 ): Promise<IEventInvitation> => {
-  // Verificar que el usuario existe
   const user = await User.findById(userId);
-  if (!user) {
-    throw new Error('Usuario no encontrado');
-  }
+  if (!user) throw new Error('Usuario no encontrado');
 
-  // Verificar si ya existe una invitación para este usuario y evento
-  const existingInvitation = await EventInvitation.findOne({
-    evento: eventoId,
-    usuario: userId,
-  });
+  const existingInvitation = await EventInvitation.findOne({ evento: eventoId, usuario: userId });
 
   if (existingInvitation) {
-    // Si ya existe y está aceptada, retornarla
-    if (existingInvitation.estadoInvitacion === 'aceptada') {
+    // Ya inscrito y aceptado → devolver la existente sin cambios
+    if (existingInvitation.estadoInvitacion === 'aceptada') return existingInvitation;
+
+    // Rechazada por el admin → el usuario puede reintentar.
+    // Se reutiliza el mismo documento (el índice único evento+usuario lo impide crear otro)
+    // y se pone en 'enviada' para que el admin lo revise. NO se resta cupo todavía.
+    if (existingInvitation.estadoInvitacion === 'rechazada') {
+      existingInvitation.estadoInvitacion = 'enviada';
+      existingInvitation.estadoAsistencia = 'pendiente';
+      existingInvitation.fechaEnvio = new Date();
+      existingInvitation.fechaRespuesta = undefined;
+      await existingInvitation.save();
       return existingInvitation;
     }
-    
-    // Si fue rechazada o caducada, lanzar error específico
-    if (existingInvitation.estadoInvitacion === 'rechazada') {
-      throw new Error('Ya rechazaste la invitación a este evento previamente');
-    }
-    
+
+    // Invitación caducada → no puede reinscribirse, debe contactar al organizador
     if (existingInvitation.estadoInvitacion === 'caducada') {
       throw new Error('Tu invitación anterior caducó. Contacta al organizador.');
     }
+
+    // Ya existe en estado 'enviada' (pendiente de revisión) → devolver sin duplicar
+    return existingInvitation;
   }
 
-  // Usar operación atómica para decrementar cupos y verificar disponibilidad
-  const evento = await Evento.findOneAndUpdate(
-    { 
-      _id: eventoId, 
-      cuposDisponibles: { $gt: 0 },
-      activo: true 
-    },
-    { $inc: { cuposDisponibles: -1 } },
-    { new: true }
-  );
+  const evento = await Evento.findById(eventoId);
+  if (!evento || !evento.activo) throw new Error('Evento no encontrado o no activo');
 
-  if (!evento) {
-    throw new Error('No hay cupos disponibles o el evento no está activo');
-  }
+  const acceptedCount = await EventInvitation.countDocuments({ evento: eventoId, estadoInvitacion: 'aceptada' });
+  if (acceptedCount >= evento.cupos) throw new Error('No hay cupos disponibles para este evento');
 
   try {
-    // Generar token único
     const token = generateToken();
-
-    // Generar código QR
     const qrCode = await generateQRCode(token);
 
-    // Crear la invitación
     const invitation = await EventInvitation.create({
       evento: eventoId,
       usuario: userId,
@@ -104,29 +79,20 @@ export const createSingleInvitation = async (
       emailEnviado: false,
     });
 
+    // Recalcular cupos tras la nueva inscripción aceptada
+    const newAcceptedCount = await EventInvitation.countDocuments({ evento: eventoId, estadoInvitacion: 'aceptada' });
+    const newCuposDisponibles = Math.max(0, evento.cupos - newAcceptedCount);
+    await Evento.findByIdAndUpdate(eventoId, { cuposDisponibles: newCuposDisponibles });
+
     return invitation;
   } catch (error) {
-    // Si falla la creación, devolver el cupo
-    await Evento.findByIdAndUpdate(eventoId, {
-      $inc: { cuposDisponibles: 1 },
-    });
     throw error;
   }
 };
 
-/**
- * Crea invitaciones masivas para un evento
- * @param eventoId - ID del evento
- * @param userIds - Array de IDs de usuarios (opcional, si no se envía, se envía a todos los usuarios activos)
- */
-export const createInvitationsForEvent = async (
-  eventoId: string,
-  userIds?: string[]
-) => {
+export const createInvitationsForEvent = async (eventoId: string, userIds?: string[]) => {
   const evento = await Evento.findById(eventoId);
-  if (!evento) {
-    throw new Error('Evento no encontrado');
-  }
+  if (!evento) throw new Error('Evento no encontrado');
 
   let users;
   if (userIds && userIds.length > 0) {
@@ -135,25 +101,13 @@ export const createInvitationsForEvent = async (
     users = await User.find({ activo: true });
   }
 
-  const results = {
-    created: [] as any[],
-    existing: [] as any[],
-    failed: [] as any[],
-  };
+  const results = { created: [] as any[], existing: [] as any[], failed: [] as any[] };
 
   for (const user of users) {
     try {
-      const existingInvitation = await EventInvitation.findOne({
-        evento: eventoId,
-        usuario: user._id,
-      });
-
+      const existingInvitation = await EventInvitation.findOne({ evento: eventoId, usuario: user._id });
       if (existingInvitation) {
-        results.existing.push({
-          userId: user._id,
-          email: user.email,
-          invitationId: existingInvitation._id,
-        });
+        results.existing.push({ userId: user._id, email: user.email, invitationId: existingInvitation._id });
         continue;
       }
 
@@ -170,93 +124,54 @@ export const createInvitationsForEvent = async (
         fechaEnvio: new Date(),
       });
 
-      results.created.push({
-        userId: user._id,
-        email: user.email,
-        invitationId: invitation._id,
-      });
+      results.created.push({ userId: user._id, email: user.email, invitationId: invitation._id });
     } catch (error) {
-      results.failed.push({
-        userId: user._id,
-        email: user.email,
-        error: error instanceof Error ? error.message : 'Error desconocido',
-      });
+      results.failed.push({ userId: user._id, email: user.email, error: error instanceof Error ? error.message : 'Error desconocido' });
     }
   }
 
   return results;
 };
 
-/**
- * Busca una invitación por su token
- */
 export const findInvitationByToken = async (token: string) => {
   return await EventInvitation.findOne({ token })
     .populate('evento')
     .populate('usuario', 'nombre email imagenPerfil');
 };
 
-/**
- * Valida y marca como usado un token (cuando se escanea el QR)
- */
 export const validateAndUseToken = async (token: string) => {
   const invitation = await EventInvitation.findOne({ token }).populate('evento');
+  if (!invitation) throw new Error('Token inválido');
+  if (invitation.estadoInvitacion !== 'aceptada') throw new Error('La invitación no ha sido aceptada');
+  if (invitation.estadoAsistencia === 'asistio') throw new Error('Este token ya fue utilizado');
 
-  if (!invitation) {
-    throw new Error('Token inválido');
-  }
-
-  if (invitation.estadoInvitacion !== 'aceptada') {
-    throw new Error('La invitación no ha sido aceptada');
-  }
-
-  if (invitation.estadoAsistencia === 'asistio') {
-    throw new Error('Este token ya fue utilizado');
-  }
-
-  // Verificar si el evento ya pasó
   const evento = invitation.evento as any;
   const eventDate = new Date(evento.fechaInicio);
   const now = new Date();
+  if (eventDate < now && now.getTime() - eventDate.getTime() > 24 * 60 * 60 * 1000) throw new Error('El evento ya finalizó');
 
-  if (eventDate < now && now.getTime() - eventDate.getTime() > 24 * 60 * 60 * 1000) {
-    throw new Error('El evento ya finalizó');
-  }
-
-  // Marcar asistencia
   invitation.estadoAsistencia = 'asistio';
   invitation.fechaUsoToken = new Date();
   invitation.intentosUso += 1;
-
   await invitation.save();
 
   return invitation;
 };
 
-/**
- * Busca todas las invitaciones de un evento
- */
 export const findInvitationsByEvent = async (eventoId: string) => {
   return await EventInvitation.find({ evento: eventoId })
     .populate('usuario', 'nombre email imagenPerfil')
     .sort({ fechaEnvio: -1 });
 };
 
-/**
- * Busca todas las invitaciones de un usuario
- */
 export const findInvitationsByUser = async (userId: string) => {
   return await EventInvitation.find({ usuario: userId })
     .populate('evento')
     .sort({ fechaEnvio: -1 });
 };
 
-/**
- * Obtiene estadísticas de invitaciones de un evento
- */
 export const getEventInvitationStats = async (eventoId: string) => {
   const invitations = await EventInvitation.find({ evento: eventoId });
-
   return {
     total: invitations.length,
     enviadas: invitations.filter((i) => i.estadoInvitacion === 'enviada').length,
@@ -269,54 +184,47 @@ export const getEventInvitationStats = async (eventoId: string) => {
   };
 };
 
-/**
- * Actualiza el estado de una invitación
- */
 export const updateInvitationStatus = async (
   invitationId: string,
   estadoInvitacion: 'enviada' | 'aceptada' | 'rechazada' | 'caducada'
 ) => {
   const invitation = await EventInvitation.findById(invitationId);
+  if (!invitation) return null;
 
-  if (!invitation) {
-    return null;
-  }
+  const previousEstado = invitation.estadoInvitacion;
 
+  // Guardar el nuevo estado PRIMERO
   invitation.estadoInvitacion = estadoInvitacion;
   invitation.fechaRespuesta = new Date();
-
   await invitation.save();
+
+  // Recalcular cuposDisponibles DESPUÉS de que el nuevo estado ya está persistido
+  if (previousEstado !== estadoInvitacion) {
+    const evento = await Evento.findById(invitation.evento);
+    if (evento) {
+      const acceptedCount = await EventInvitation.countDocuments({ evento: invitation.evento, estadoInvitacion: 'aceptada' });
+      const newCuposDisponibles = Math.max(0, evento.cupos - acceptedCount);
+      await Evento.findByIdAndUpdate(invitation.evento, { cuposDisponibles: newCuposDisponibles });
+    }
+  }
 
   return invitation;
 };
 
-/**
- * Responde a una invitación (aceptar o rechazar)
- */
-export const respondToInvitationByToken = async (
-  token: string,
-  respuesta: 'aceptada' | 'rechazada'
-) => {
+export const respondToInvitationByToken = async (token: string, respuesta: 'aceptada' | 'rechazada') => {
   const invitation = await EventInvitation.findOne({ token });
-
-  if (!invitation) {
-    throw new Error('Invitación no encontrada');
-  }
-
-  if (invitation.estadoInvitacion !== 'enviada') {
-    throw new Error('Esta invitación ya fue respondida');
-  }
+  if (!invitation) throw new Error('Invitación no encontrada');
+  if (invitation.estadoInvitacion !== 'enviada') throw new Error('Esta invitación ya fue respondida');
 
   invitation.estadoInvitacion = respuesta;
   invitation.fechaRespuesta = new Date();
-
   await invitation.save();
 
-  // Si fue rechazada, liberar el cupo
-  if (respuesta === 'rechazada') {
-    await Evento.findByIdAndUpdate(invitation.evento, {
-      $inc: { cuposDisponibles: 1 },
-    });
+  const acceptedCount = await EventInvitation.countDocuments({ evento: invitation.evento, estadoInvitacion: 'aceptada' });
+  const evento = await Evento.findById(invitation.evento);
+  if (evento) {
+    const newCuposDisponibles = Math.max(0, evento.cupos - acceptedCount);
+    await Evento.findByIdAndUpdate(invitation.evento, { cuposDisponibles: newCuposDisponibles });
   }
 
   return invitation;
@@ -327,40 +235,34 @@ export const respondToInvitationByToken = async (
  */
 export const markAttendance = async (
   invitationId: string,
-  asistio: boolean
+  estadoAsistencia: string
 ) => {
   const invitation = await EventInvitation.findById(invitationId);
+  if (!invitation) return null;
 
-  if (!invitation) {
-    return null;
+  if (estadoAsistencia === 'asistio' || estadoAsistencia === 'no_asistio' || estadoAsistencia === 'pendiente') {
+    invitation.estadoAsistencia = estadoAsistencia;
+  } else {
+    invitation.estadoAsistencia = 'no_asistio';
   }
 
-  invitation.estadoAsistencia = asistio ? 'asistio' : 'no_asistio';
-  if (asistio && !invitation.fechaUsoToken) {
+  if (invitation.estadoAsistencia === 'asistio' && !invitation.fechaUsoToken) {
     invitation.fechaUsoToken = new Date();
   }
 
   await invitation.save();
-
   return invitation;
 };
 
-/**
- * Regenera el código QR de una invitación
- */
 export const regenerateQRCode = async (invitationId: string) => {
   const invitation = await EventInvitation.findById(invitationId);
-
-  if (!invitation) {
-    throw new Error('Invitación no encontrada');
-  }
+  if (!invitation) throw new Error('Invitación no encontrada');
 
   const newToken = generateToken();
   const newQRCode = await generateQRCode(newToken);
 
   invitation.token = newToken;
   invitation.qrCode = newQRCode;
-
   await invitation.save();
 
   return invitation;

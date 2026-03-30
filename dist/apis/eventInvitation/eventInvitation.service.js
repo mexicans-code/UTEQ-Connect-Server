@@ -59,14 +59,17 @@ export const createSingleInvitation = async (eventoId, userId) => {
             throw new Error('Tu invitación anterior caducó. Contacta al organizador.');
         }
     }
-    // Usar operación atómica para decrementar cupos y verificar disponibilidad
-    const evento = await Evento.findOneAndUpdate({
-        _id: eventoId,
-        cuposDisponibles: { $gt: 0 },
-        activo: true
-    }, { $inc: { cuposDisponibles: -1 } }, { new: true });
-    if (!evento) {
-        throw new Error('No hay cupos disponibles o el evento no está activo');
+    // Verificar disponibilidad de cupos
+    const evento = await Evento.findById(eventoId);
+    if (!evento || !evento.activo) {
+        throw new Error('Evento no encontrado o no activo');
+    }
+    const acceptedCount = await EventInvitation.countDocuments({
+        evento: eventoId,
+        estadoInvitacion: 'aceptada'
+    });
+    if (acceptedCount >= evento.cupos) {
+        throw new Error('No hay cupos disponibles para este evento');
     }
     try {
         // Generar token único
@@ -85,13 +88,16 @@ export const createSingleInvitation = async (eventoId, userId) => {
             fechaRespuesta: new Date(),
             emailEnviado: false,
         });
+        // Recalcular cuposDisponibles basado en invitaciones aceptadas
+        const newAcceptedCount = await EventInvitation.countDocuments({
+            evento: eventoId,
+            estadoInvitacion: 'aceptada'
+        });
+        const newCuposDisponibles = evento.cupos - newAcceptedCount;
+        await Evento.findByIdAndUpdate(eventoId, { cuposDisponibles: newCuposDisponibles });
         return invitation;
     }
     catch (error) {
-        // Si falla la creación, devolver el cupo
-        await Evento.findByIdAndUpdate(eventoId, {
-            $inc: { cuposDisponibles: 1 },
-        });
         throw error;
     }
 };
@@ -234,6 +240,20 @@ export const updateInvitationStatus = async (invitationId, estadoInvitacion) => 
     if (!invitation) {
         return null;
     }
+    const previousEstado = invitation.estadoInvitacion;
+    // Ajustar cupos solo si cambia entre estados que ocupan lugar o lo liberan.
+    if (previousEstado !== estadoInvitacion) {
+        const evento = await Evento.findById(invitation.evento);
+        if (evento) {
+            // Recalcular cuposDisponibles basado en invitaciones aceptadas
+            const acceptedCount = await EventInvitation.countDocuments({
+                evento: invitation.evento,
+                estadoInvitacion: 'aceptada'
+            });
+            const newCuposDisponibles = evento.cupos - acceptedCount;
+            await Evento.findByIdAndUpdate(invitation.evento, { cuposDisponibles: newCuposDisponibles });
+        }
+    }
     invitation.estadoInvitacion = estadoInvitacion;
     invitation.fechaRespuesta = new Date();
     await invitation.save();
@@ -253,11 +273,15 @@ export const respondToInvitationByToken = async (token, respuesta) => {
     invitation.estadoInvitacion = respuesta;
     invitation.fechaRespuesta = new Date();
     await invitation.save();
-    // Si fue rechazada, liberar el cupo
-    if (respuesta === 'rechazada') {
-        await Evento.findByIdAndUpdate(invitation.evento, {
-            $inc: { cuposDisponibles: 1 },
-        });
+    // Recalcular cuposDisponibles basado en invitaciones aceptadas
+    const acceptedCount = await EventInvitation.countDocuments({
+        evento: invitation.evento,
+        estadoInvitacion: 'aceptada'
+    });
+    const evento = await Evento.findById(invitation.evento);
+    if (evento) {
+        const newCuposDisponibles = evento.cupos - acceptedCount;
+        await Evento.findByIdAndUpdate(invitation.evento, { cuposDisponibles: newCuposDisponibles });
     }
     return invitation;
 };

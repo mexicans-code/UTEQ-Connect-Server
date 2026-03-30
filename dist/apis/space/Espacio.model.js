@@ -21,12 +21,16 @@ const EspacioSchema = new Schema({
     },
     planta: {
         type: String,
-        enum: ["alta", "baja", "única"],
+        enum: ["Planta baja", "Planta alta", "Planta única"],
         required: [true, "La planta es requerida"]
     },
     descripcion: {
         type: String,
         trim: true
+    },
+    image: {
+        type: String,
+        default: null
     }
 }, {
     timestamps: true,

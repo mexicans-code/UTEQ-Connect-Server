@@ -22,6 +22,11 @@ const PersonalSchema = new Schema({
     cubiculo: { type: String, required: false },
     planta: { type: String, required: false },
     fechaIngreso: { type: Date, required: true },
+    imagenHorario: {
+        type: String,
+        required: false,
+        default: null
+    },
     estatus: {
         type: String,
         enum: ["activo", "inactivo"],
@@ -31,6 +36,12 @@ const PersonalSchema = new Schema({
         type: String,
         enum: ['admin', 'superadmin'],
         default: 'admin'
+    },
+    userId: {
+        type: String,
+        required: false,
+        default: null,
+        index: true,
     }
 }, {
     timestamps: true,

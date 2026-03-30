@@ -10,6 +10,7 @@ export interface IUser extends Document {
   estatus: "activo" | "inactivo";
   fechaCreacion: Date;
   ultimoLogin?: Date;
+  requiereCambioPassword?: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -52,6 +53,10 @@ const UserSchema = new Schema<IUser>({
   },
   ultimoLogin: {
     type: Date
+  },
+  requiereCambioPassword: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,

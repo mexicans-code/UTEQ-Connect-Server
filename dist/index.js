@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
 import connectDB from './database/MongoDB.js';
 import locationRoutes from './apis/location/location.routes.js';
 import eventRoutes from './apis/event/event.routes.js';
@@ -15,31 +13,11 @@ import { deactivateExpiredEvents } from './apis/event/event.service.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
-// CREAR CARPETAS DE UPLOADS SI NO EXISTEN
-const uploadsDestinos = path.join(process.cwd(), 'uploads', 'destinos');
-const uploadsEvents = path.join(process.cwd(), 'uploads', 'events');
-if (!fs.existsSync(uploadsDestinos)) {
-    fs.mkdirSync(uploadsDestinos, { recursive: true });
-    console.log('📁 Carpeta uploads/destinos creada');
-}
-else {
-    console.log('📁 Carpeta uploads/destinos ya existe');
-}
-if (!fs.existsSync(uploadsEvents)) {
-    fs.mkdirSync(uploadsEvents, { recursive: true });
-    console.log('📁 Carpeta uploads/events creada');
-}
-else {
-    console.log('📁 Carpeta uploads/events ya existe');
-}
 // Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/espacios", espacioRoutes);
-// SERVIR ARCHIVOS ESTÁTICOS (antes de las rutas)
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-console.log('📂 Archivos estáticos configurados');
 // Conectar a MongoDB
 connectDB();
 // TAREA PROGRAMADA: Desactivar eventos expirados cada minuto
@@ -65,7 +43,6 @@ app.get('/', (req, res) => {
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📂 Archivos estáticos: http://localhost:${PORT}/uploads`);
     console.log(`⏰ Tarea de desactivación automática de eventos: ACTIVA`);
     console.log(`API Locations: http://localhost:${PORT}/api/locations`);
     console.log(`API Events: http://localhost:${PORT}/api/events`);

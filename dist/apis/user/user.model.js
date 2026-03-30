@@ -39,6 +39,10 @@ const UserSchema = new Schema({
     },
     ultimoLogin: {
         type: Date
+    },
+    requiereCambioPassword: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,

@@ -294,7 +294,6 @@ export const searchPersonal = async (req: Request, res: Response) => {
 export const updatePersonalProfileImage = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { imagenPerfil } = req.body;
 
         if (typeof id !== 'string') {
             return res.status(400).json({
@@ -303,16 +302,18 @@ export const updatePersonalProfileImage = async (req: Request, res: Response) =>
             });
         }
 
-        if (!imagenPerfil) {
+        if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'URL de imagen es requerida'
+                message: 'No se ha proporcionado ninguna imagen'
             });
         }
 
+        const imageUrl = req.file.path; // URL completa de Cloudinary
+
         const personal = await PersonalModel.findByIdAndUpdate(
             id,
-            { imagenPerfil },
+            { imagenPerfil: imageUrl },
             { new: true }
         );
 
@@ -370,6 +371,91 @@ export const deletePersonalProfileImage = async (req: Request, res: Response) =>
         res.status(500).json({
             success: false,
             message: 'Error al eliminar imagen de perfil',
+            error: error.message
+        });
+    }
+};
+
+export const updatePersonalScheduleImage = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        if (typeof id !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID inválido'
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No se ha proporcionado ninguna imagen'
+            });
+        }
+
+        const imageUrl = req.file.path; // URL completa de Cloudinary
+
+        const personal = await PersonalModel.findByIdAndUpdate(
+            id,
+            { imagenHorario: imageUrl },
+            { new: true }
+        );
+
+        if (!personal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Personal no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Imagen de horario actualizada exitosamente',
+            data: personal
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar imagen de horario',
+            error: error.message
+        });
+    }
+};
+
+export const deletePersonalScheduleImage = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        if (typeof id !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID inválido'
+            });
+        }
+
+        const personal = await PersonalModel.findByIdAndUpdate(
+            id,
+            { imagenHorario: null },
+            { new: true }
+        );
+
+        if (!personal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Personal no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Imagen de horario eliminada exitosamente',
+            data: personal
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar imagen de horario',
             error: error.message
         });
     }

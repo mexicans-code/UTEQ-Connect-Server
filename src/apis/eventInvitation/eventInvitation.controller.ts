@@ -244,16 +244,36 @@ export const registerToEvent = async (req: Request, res: Response) => {
 export const markAttendance = async (req: Request, res: Response) => {
   try {
     const invitationId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { asistio } = req.body;
+    const { asistio, estadoAsistencia } = req.body;
 
-    if (typeof asistio !== 'boolean') {
+    // Soportar ambos formatos:
+    //   { estadoAsistencia: "asistio" | "no_asistio" | "pendiente" }  ← frontend actual
+    //   { asistio: true | false }                                      ← formato legacy
+    let estadoFinal: string;
+    if (estadoAsistencia !== undefined) {
+      if (!['asistio', 'no_asistio', 'pendiente'].includes(estadoAsistencia)) {
+        return res.status(400).json({
+          success: false,
+          error: 'estadoAsistencia inválido. Debe ser "asistio", "no_asistio" o "pendiente"'
+        });
+      }
+      estadoFinal = estadoAsistencia;
+    } else if (asistio !== undefined) {
+      if (typeof asistio !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          error: 'El campo "asistio" debe ser un booleano'
+        });
+      }
+      estadoFinal = asistio ? 'asistio' : 'no_asistio';
+    } else {
       return res.status(400).json({
         success: false,
-        error: 'El campo "asistio" debe ser un booleano'
+        error: 'Se requiere "estadoAsistencia" o "asistio" en el body'
       });
     }
 
-    const invitation = await invitationService.markAttendance(invitationId, asistio);
+    const invitation = await invitationService.markAttendance(invitationId, estadoFinal);
 
     if (!invitation) {
       return res.status(404).json({

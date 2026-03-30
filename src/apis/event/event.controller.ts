@@ -59,9 +59,19 @@ export const createEvent = async (req: Request, res: Response) => {
       data: event
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    if (errorMessage.startsWith('CONFLICT_SALA::')) {
+      const conflictData = JSON.parse(errorMessage.replace('CONFLICT_SALA::', ''));
+      return res.status(409).json({
+        success: false,
+        error: 'Conflicto de sala detectado. Es obligatorio realizar una reasignación.',
+        conflict: conflictData,
+        requiresReassignment: true
+      });
+    }
     res.status(400).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      error: errorMessage
     });
   }
 };
@@ -100,9 +110,19 @@ export const updateEvent = async (req: Request, res: Response) => {
       data: event
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    if (errorMessage.startsWith('CONFLICT_SALA::')) {
+      const conflictData = JSON.parse(errorMessage.replace('CONFLICT_SALA::', ''));
+      return res.status(409).json({
+        success: false,
+        error: 'Conflicto de sala detectado. Es obligatorio realizar una reasignación.',
+        conflict: conflictData,
+        requiresReassignment: true
+      });
+    }
     res.status(400).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido'
+      error: errorMessage
     });
   }
 };
@@ -264,10 +284,18 @@ export const deleteEventImage = async (req: Request, res: Response) => {
 /* ── Reasignación atómica (solo superadmin) ── */
 export const reasignarYCrear = async (req: Request, res: Response) => {
   try {
-    const { eventoPrevioId, nuevaEspacioId, nuevoEvento } = req.body;
+    const { eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, nuevoEvento } = req.body;
+    console.log('reasignarYCrear request body:', { eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, nuevoEvento });
     if (!eventoPrevioId || !nuevoEvento)
       return res.status(400).json({ success: false, error: 'Faltan datos para reasignación' });
-    const event = await eventService.reasignarYCrear(eventoPrevioId, nuevaEspacioId || null, nuevoEvento);
+
+    // Pasar valores tal cual; si vienen vacíos se interpretan como no modificados.
+    const event = await eventService.reasignarYCrear(
+      eventoPrevioId,
+      nuevaEspacioId || undefined,
+      nuevaDestinoPrevioId || undefined,
+      nuevoEvento
+    );
     res.status(201).json({ success: true, message: "Evento creado con reasignación", data: event });
   } catch (error) {
     res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Error desconocido' });
@@ -276,11 +304,16 @@ export const reasignarYCrear = async (req: Request, res: Response) => {
 
 export const reasignarYActualizar = async (req: Request<{ id: string }>, res: Response) => {
   try {
-    const { eventoPrevioId, nuevaEspacioId, updateData } = req.body;
+    const { eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, updateData } = req.body;
+    console.log('reasignarYActualizar request body:', { eventoPrevioId, nuevaEspacioId, nuevaDestinoPrevioId, updateData, eventId: req.params.id });
     if (!eventoPrevioId || !updateData)
       return res.status(400).json({ success: false, error: 'Faltan datos para reasignación' });
     const event = await eventService.reasignarYActualizar(
-      eventoPrevioId, nuevaEspacioId || null, req.params.id, updateData
+      eventoPrevioId,
+      nuevaEspacioId || undefined,
+      nuevaDestinoPrevioId || undefined,
+      req.params.id as string,
+      updateData
     );
     res.json({ success: true, message: "Evento actualizado con reasignación", data: event });
   } catch (error) {

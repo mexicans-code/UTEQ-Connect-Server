@@ -13,8 +13,10 @@ export interface IPersonal extends Document {
   cubiculo: string;
   planta: string;
   fechaIngreso: Date;
+  imagenHorario?: string;
   estatus: string;
   rol: 'admin' | 'superadmin';
+  userId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -43,6 +45,11 @@ const PersonalSchema = new Schema<IPersonal>(
     cubiculo: { type: String, required: false },
     planta: { type: String, required: false },
     fechaIngreso: { type: Date, required: true },
+    imagenHorario: {
+      type: String,
+      required: false,
+      default: null
+    },
     estatus: { 
       type: String, 
       enum: ["activo", "inactivo"], 
@@ -52,6 +59,12 @@ const PersonalSchema = new Schema<IPersonal>(
       type: String, 
       enum: ['admin', 'superadmin'],
       default: 'admin'
+    },
+    userId: {
+      type: String,
+      required: false,
+      default: null,
+      index: true,
     }
   },
   { 

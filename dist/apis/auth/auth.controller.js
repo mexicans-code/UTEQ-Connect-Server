@@ -99,6 +99,13 @@ export const registerAdmin = async (req, res) => {
         // Validar que el rol sea válido
         const rolesPermitidos = ['user', 'admin', 'superadmin'];
         const rolFinal = rolesPermitidos.includes(rol) ? rol : 'user';
+        // Validar permisos: admin no puede crear superadmin
+        if (req.user?.rol === 'admin' && rolFinal === 'superadmin') {
+            return res.status(403).json({
+                success: false,
+                error: 'No tienes permisos para crear superadministradores'
+            });
+        }
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return res.status(400).json({
@@ -113,6 +120,7 @@ export const registerAdmin = async (req, res) => {
             rol: rolFinal, // ← rol que llegó en el body
             estatus: 'activo',
             fechaCreacion: new Date(),
+            requiereCambioPassword: rolFinal === 'admin' || rolFinal === 'superadmin',
         });
         const payload = {
             id: newUser._id.toString(),
@@ -210,7 +218,9 @@ export const login = async (req, res) => {
                     email: user.email,
                     rol: user.rol,
                     estatus: user.estatus,
-                    ultimoLogin: user.ultimoLogin
+                    imagenPerfil: user.imagenPerfil || null,
+                    ultimoLogin: user.ultimoLogin,
+                    requiereCambioPassword: user.requiereCambioPassword ?? false,
                 },
                 token
             }

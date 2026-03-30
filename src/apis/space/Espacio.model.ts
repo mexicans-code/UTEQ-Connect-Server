@@ -5,8 +5,9 @@ export interface IEspacio extends Document {
     destino: mongoose.Types.ObjectId;
     cupos: number;
     ocupado: boolean;
-    planta: "alta" | "baja" | "única";
+    planta: "Planta baja" | "Planta alta" | "Planta única";
     descripcion?: string;
+    image?: string;
 }
 
 const EspacioSchema = new Schema<IEspacio>({
@@ -31,12 +32,16 @@ const EspacioSchema = new Schema<IEspacio>({
     },
     planta: {
         type: String,
-        enum: ["alta", "baja", "única"],
+        enum: ["Planta baja", "Planta alta", "Planta única"],
         required: [true, "La planta es requerida"]
     },
     descripcion: {
         type: String,
         trim: true
+    },
+    image: {
+        type: String,
+        default: null
     }
 }, {
     timestamps: true,

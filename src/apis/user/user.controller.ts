@@ -327,7 +327,8 @@ export const changePassword = async (req: Request, res: Response) => {
       });
     }
 
-    const user = await User.findById(userId);
+    // passwordHash tiene select:false en el schema, hay que pedirlo explicitamente
+    const user = await User.findById(userId).select('+passwordHash');
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -335,18 +336,18 @@ export const changePassword = async (req: Request, res: Response) => {
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    // Usar el metodo del modelo que ya maneja bcrypt correctamente
+    const isPasswordValid = await user.comparePassword(currentPassword);
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: 'Contraseña actual incorrecta'
+        error: 'Contrasena actual incorrecta'
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const newPasswordHash = await bcrypt.hash(newPassword, salt);
-
-    user.passwordHash = newPasswordHash;
+    // Asignar texto plano: el pre-save hook del modelo hace el hash automaticamente
+    user.passwordHash = newPassword;
+    user.requiereCambioPassword = false;
     await user.save();
 
     res.json({
