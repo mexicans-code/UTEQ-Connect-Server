@@ -1,6 +1,8 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http'; // 👈
+import { Server } from 'socket.io'; // 👈
 import connectDB from './database/MongoDB.js';
 import locationRoutes from './apis/location/location.routes.js';
 import eventRoutes from './apis/event/event.routes.js';
@@ -17,51 +19,56 @@ import fs from 'fs';
 dotenv.config();
 
 const app: Application = express();
+const httpServer = createServer(app); // 👈
+
+// 👈 Inicializar socket.io
+export const io = new Server(httpServer, {
+  cors: { origin: '*' }
+});
+
+io.on('connection', (socket) => {
+  console.log('🔌 Cliente conectado:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('🔌 Cliente desconectado:', socket.id);
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 
-
-
-// CREAR CARPETAS DE UPLOADS SI NO EXISTEN
 const uploadsDestinos = path.join(process.cwd(), 'uploads', 'destinos');
 const uploadsEvents = path.join(process.cwd(), 'uploads', 'events');
 
 if (!fs.existsSync(uploadsDestinos)) {
     fs.mkdirSync(uploadsDestinos, { recursive: true });
-    console.log(' Carpeta uploads/destinos creada');
+    console.log('Carpeta uploads/destinos creada');
 } else {
-    console.log(' Carpeta uploads/destinos ya existe');
+    console.log('Carpeta uploads/destinos ya existe');
 }
 
 if (!fs.existsSync(uploadsEvents)) {
     fs.mkdirSync(uploadsEvents, { recursive: true });
-    console.log(' Carpeta uploads/events creada');
+    console.log('Carpeta uploads/events creada');
 } else {
-    console.log(' Carpeta uploads/events ya existe');
+    console.log('Carpeta uploads/events ya existe');
 }
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/espacios", espacioRoutes);
-
-// SERVIR ARCHIVOS ESTÁTICOS (antes de las rutas)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-console.log(' Archivos estáticos configurados');
+console.log('Archivos estáticos configurados');
 
-// Conectar a MongoDB
 connectDB();
 
-// TAREA PROGRAMADA: Desactivar eventos expirados cada minuto
 setInterval(async () => {
     try {
         await deactivateExpiredEvents();
     } catch (error) {
         console.error('Error en tarea programada de desactivación:', error);
     }
-}, 60000); // Ejecutar cada 60 segundos (1 minuto)
+}, 60000);
 
-// Routes
 app.use('/api/locations', locationRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
@@ -71,28 +78,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/most-visited", mostVisitedRoutes);
 app.use('/api/grafo', graphRoutes);
 
-// Ruta de prueba
 app.get('/', (req, res) => {
     res.json({ message: 'UTEQ Connect API' });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
+// 👈 httpServer en lugar de app.listen
+httpServer.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     console.log(`⏰ Tarea de desactivación automática de eventos: ACTIVA`);
-    console.log(`API Locations: http://localhost:${PORT}/api/locations`);
-    console.log(`API Events: http://localhost:${PORT}/api/events`);
-    console.log(`API Users: http://localhost:${PORT}/api/users`);
-    console.log(`API Invitations: http://localhost:${PORT}/api/invitaciones`);
-    console.log(` Servidor corriendo en http://localhost:${PORT}`);
-    console.log(` Archivos estáticos: http://localhost:${PORT}/uploads`);
-    console.log(` Tarea de desactivación automática de eventos: ACTIVA`);
-    console.log(` API Locations: http://localhost:${PORT}/api/locations`);
-    console.log(` API Events: http://localhost:${PORT}/api/events`);
-    console.log(` API Users: http://localhost:${PORT}/api/users`);
-    console.log(` API Invitations: http://localhost:${PORT}/api/invitaciones`);
-    console.log(`API Personal: http://localhost:${PORT}/api/personal`);
-    console.log(`API Espacios: http://localhost:${PORT}/api/espacios`);
 });
 
 export default app;

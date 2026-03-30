@@ -10,17 +10,17 @@ import {
   getActiveEvents,
   getEventsByDestino,
   uploadEventImage,
-  deleteEventImage, reasignarYCrear, reasignarYActualizar, confirmAssistence
+  deleteEventImage,
+  reasignarYCrear,
+  reasignarYActualizar,
+  confirmAssistence
 } from './event.controller.js';
 import { upload } from '../../config/multer.config.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
-import { sseStream } from './event.sse.js';
-
 
 const router = express.Router();
 
 router.get('/', getEvents);
-router.get('/stream', sseStream);
 router.get('/active', getActiveEvents);
 router.get('/destino/:destinoId', getEventsByDestino);
 router.patch('/:eventoId/confirm-assistence/:userId', confirmAssistence);
