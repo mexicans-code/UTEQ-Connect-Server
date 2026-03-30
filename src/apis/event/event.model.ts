@@ -14,6 +14,7 @@ export interface IEvent extends Document {
   activo: boolean;
   desactivarEn?: Date;
   image?: string;
+  imagePublicId?: string;
 }
 
 const EventSchema = new Schema<IEvent>({

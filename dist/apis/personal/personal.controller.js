@@ -66,6 +66,8 @@ export const createNewPersonal = async (req, res) => {
 };
 export const updatePersonalById = async (req, res) => {
     try {
+        console.log('🔴 UPDATE id:', req.params.id);
+        console.log('📦 Body completo:', JSON.stringify(req.body, null, 2));
         const { id } = req.params;
         if (typeof id !== 'string') {
             return res.status(400).json({

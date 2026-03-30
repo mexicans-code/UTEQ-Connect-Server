@@ -15,7 +15,7 @@ declare global {
   }
 }
 
-export const authenticateToken = async (  
+export const authenticateToken = async (
   req: Request,
   res: Response,
   next: NextFunction

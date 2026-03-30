@@ -107,9 +107,9 @@ export const updateEvent = async (req: Request, res: Response) => {
         error: 'Evento no encontrado'
       });
     }
-    
+
     broadcastEventChange('event_updated', event); // 👈
-    
+
     res.json({
       success: true,
       message: "Evento actualizado exitosamente",
@@ -137,13 +137,13 @@ export const deleteEvent = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     console.log('🔴 DELETE llamado con id:', id);
-    
+
     const found = await eventService.findEventById(id);
     console.log('🔴 findById resultado:', found);
-    
+
     const event = await eventService.deleteEvent(id);
     console.log('🔴 deleteEvent resultado:', event);
-    
+
     if (!event) {
       return res.status(404).json({
         success: false,
@@ -243,21 +243,20 @@ export const uploadEventImage = async (req: Request, res: Response) => {
       });
     }
 
-    const imagePath = `uploads/events/${req.file.filename}`;
-    const event = await eventService.updateEventImage(id, imagePath);
+    // ✅ Con CloudinaryStorage, la URL pública ya viene en req.file.path
+    const imageUrl = (req.file as any).path;
+    const publicId = (req.file as any).filename; // public_id de Cloudinary
+
+    console.log('☁️  [uploadEventImage] imageUrl:', imageUrl);
+    console.log('☁️  [uploadEventImage] publicId:', publicId);
+
+    const event = await eventService.updateEventImage(id, imageUrl, publicId);
 
     if (!event) {
-      return res.status(404).json({
-        success: false,
-        error: 'Evento no encontrado'
-      });
+      return res.status(404).json({ success: false, error: 'Evento no encontrado' });
     }
 
-    res.json({
-      success: true,
-      data: event,
-      imageUrl: `${req.protocol}://${req.get('host')}/${imagePath}`
-    });
+    res.json({ success: true, data: event, imageUrl });
   } catch (error) {
     res.status(500).json({
       success: false,

@@ -10,8 +10,11 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary,
     params: (req, file) => {
+        const url = req.originalUrl; // ← más confiable que baseUrl + path
+        console.log('📁 [Cloudinary] originalUrl:', url);
+        console.log('📁 [Cloudinary] baseUrl:', req.baseUrl);
+        console.log('📁 [Cloudinary] path:', req.path);
         let folder = 'uteq/destinos';
-        const url = req.baseUrl + (req.path || '');
         if (url.includes('/events'))
             folder = 'uteq/events';
         else if (url.includes('/espacios'))
@@ -21,8 +24,9 @@ const storage = new CloudinaryStorage({
         else if (url.includes('/users'))
             folder = 'uteq/users';
         else if (url.includes('/locations'))
-            folder = 'uteq/destinos';
-        const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9);
+            folder = 'uteq/locations';
+        console.log('📂 [Cloudinary] folder elegido:', folder);
+        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
         return {
             folder,
             public_id: uniqueName,
@@ -35,6 +39,7 @@ const fileFilter = (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
+    console.log('🖼️  [Cloudinary] archivo:', file.originalname, '| mimetype:', file.mimetype, '| válido:', mimetype && extname);
     if (mimetype && extname) {
         cb(null, true);
     }
@@ -44,7 +49,7 @@ const fileFilter = (req, file, cb) => {
 };
 export const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter,
 });
 export { cloudinary };

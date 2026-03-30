@@ -226,19 +226,16 @@ export const uploadEventImage = async (req, res) => {
                 error: 'No se ha proporcionado ninguna imagen'
             });
         }
-        const imagePath = `uploads/events/${req.file.filename}`;
-        const event = await eventService.updateEventImage(id, imagePath);
+        // ✅ Con CloudinaryStorage, la URL pública ya viene en req.file.path
+        const imageUrl = req.file.path;
+        const publicId = req.file.filename; // public_id de Cloudinary
+        console.log('☁️  [uploadEventImage] imageUrl:', imageUrl);
+        console.log('☁️  [uploadEventImage] publicId:', publicId);
+        const event = await eventService.updateEventImage(id, imageUrl, publicId);
         if (!event) {
-            return res.status(404).json({
-                success: false,
-                error: 'Evento no encontrado'
-            });
+            return res.status(404).json({ success: false, error: 'Evento no encontrado' });
         }
-        res.json({
-            success: true,
-            data: event,
-            imageUrl: `${req.protocol}://${req.get('host')}/${imagePath}`
-        });
+        res.json({ success: true, data: event, imageUrl });
     }
     catch (error) {
         res.status(500).json({

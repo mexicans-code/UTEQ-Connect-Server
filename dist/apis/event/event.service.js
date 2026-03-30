@@ -3,6 +3,7 @@ import EspacioModel from '../space/Espacio.model.js';
 import EventInvitation from '../eventInvitation/eventInvitation.model.js';
 import fs from 'fs';
 import path from 'path';
+import { cloudinary } from '../../config/multer.config.js';
 /* ─── helpers ─── */
 const toMin = (h) => { const [hh, mm] = h.split(':').map(Number); return hh * 60 + mm; };
 const hayTraslapeH = (h1i, h1f, h2i, h2f) => toMin(h1i) < toMin(h2f) && toMin(h1f) > toMin(h2i);
@@ -320,17 +321,20 @@ export const findEventsByDestino = async (destinoId) => {
         throw new Error('Error obteniendo eventos por destino');
     }
 };
-export const updateEventImage = async (id, imagePath) => {
+export const updateEventImage = async (id, imageUrl, publicId) => {
     try {
         const old = await Event.findById(id);
         if (old?.image) {
-            const p = path.join(process.cwd(), old.image);
-            if (fs.existsSync(p))
-                fs.unlinkSync(p);
+            const oldPublicId = old.imagePublicId; // ← guarda este campo en tu modelo
+            if (oldPublicId) {
+                await cloudinary.uploader.destroy(oldPublicId);
+                console.log('🗑️  [Cloudinary] imagen anterior borrada:', oldPublicId);
+            }
         }
-        return await Event.findByIdAndUpdate(id, { image: imagePath }, { new: true });
+        return await Event.findByIdAndUpdate(id, { image: imageUrl, imagePublicId: publicId }, // ← guarda ambos
+        { new: true });
     }
-    catch {
+    catch (err) {
         throw new Error('Error actualizando imagen del evento');
     }
 };

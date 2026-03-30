@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
 
+import { cloudinary } from '../../config/multer.config.js';
 interface IUserPopulated {
   _id: mongoose.Types.ObjectId;
   nombre: string;
@@ -368,16 +369,29 @@ export const findEventsByDestino = async (destinoId: string) => {
   } catch { throw new Error('Error obteniendo eventos por destino'); }
 };
 
-export const updateEventImage = async (id: string, imagePath: string) => {
+export const updateEventImage = async (id: string, imageUrl: string, publicId: string) => {
   try {
     const old = await Event.findById(id);
+
     if (old?.image) {
-      const p = path.join(process.cwd(), old.image);
-      if (fs.existsSync(p)) fs.unlinkSync(p);
+      const oldPublicId = old.imagePublicId; // ← guarda este campo en tu modelo
+      if (oldPublicId) {
+        await cloudinary.uploader.destroy(oldPublicId);
+        console.log('🗑️  [Cloudinary] imagen anterior borrada:', oldPublicId);
+      }
     }
-    return await Event.findByIdAndUpdate(id, { image: imagePath }, { new: true });
-  } catch { throw new Error('Error actualizando imagen del evento'); }
+
+    return await Event.findByIdAndUpdate(
+      id,
+      { image: imageUrl, imagePublicId: publicId }, // ← guarda ambos
+      { new: true }
+    );
+  } catch (err) {
+    throw new Error('Error actualizando imagen del evento');
+  }
 };
+
+
 
 export const deleteEventImage = async (id: string) => {
   try {
@@ -409,7 +423,7 @@ export const deactivateExpiredEvents = async () => {
 
 
 export const confirmAssistence = async (usuarioId: string, eventoId: string, estadoAsistencia: string) => {
-  const assistence = await EventInvitation.findOne({ 
+  const assistence = await EventInvitation.findOne({
     usuario: usuarioId,
     evento: eventoId,
     estadoInvitacion: "aceptada"
