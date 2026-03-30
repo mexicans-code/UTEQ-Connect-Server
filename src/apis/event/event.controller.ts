@@ -323,8 +323,8 @@ export const reasignarYActualizar = async (req: Request<{ id: string }>, res: Re
 
 export const confirmAssistence = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
-    await eventService.confirmAssistence(userId as string);
+    const { userId, eventoId } = req.params; // 👈 agrega eventoId
+    await eventService.confirmAssistence(userId as string, eventoId as string);
     res.json({ success: true, message: "Asistencia confirmada" });
   } catch (error) {
     console.error("ERROR completo:", error);

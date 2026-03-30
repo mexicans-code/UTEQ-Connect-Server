@@ -20,7 +20,7 @@ const router = express.Router();
 router.get('/', getEvents);
 router.get('/active', getActiveEvents);
 router.get('/destino/:destinoId', getEventsByDestino);
-router.patch('/:userId/confirm-assistence', confirmAssistence);
+router.patch('/:eventoId/confirm-assistence/:userId', confirmAssistence);
 router.get('/:id', getEventById);
 router.post('/reasignar-crear', authenticateToken, reasignarYCrear);
 

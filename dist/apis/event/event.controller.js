@@ -294,8 +294,8 @@ export const reasignarYActualizar = async (req, res) => {
 };
 export const confirmAssistence = async (req, res) => {
     try {
-        const { userId } = req.params;
-        await eventService.confirmAssistence(userId);
+        const { userId, eventoId } = req.params; // 👈 agrega eventoId
+        await eventService.confirmAssistence(userId, eventoId);
         res.json({ success: true, message: "Asistencia confirmada" });
     }
     catch (error) {
