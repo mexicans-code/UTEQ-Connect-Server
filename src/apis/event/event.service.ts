@@ -410,7 +410,7 @@ export const deactivateExpiredEvents = async () => {
 
 export const confirmAssistence = async (usuarioId: string) => {
   try {
-    const assistence = await EventInvitation.findOne({ 
+    const assistence = await EventInvitation.findOne({
       usuario: usuarioId,
       estadoInvitacion: "aceptada"
     });
