@@ -85,6 +85,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 console.log('Archivos estáticos configurados');
 
+
+app.set('trust proxy', 1);
 app.use('/api/', generalLimiter);
 
 
