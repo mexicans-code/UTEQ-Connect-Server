@@ -27,12 +27,12 @@ const PersonalSchema = new Schema<IPersonal>(
     nombre: { type: String, required: true },
     apellidoPaterno: { type: String, required: true },
     apellidoMaterno: { type: String, required: true },
-    email: { 
-      type: String, 
-      required: true, 
-      unique: true, 
-      lowercase: true, 
-      trim: true 
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true
     },
     imagenPerfil: {
       type: String,
@@ -50,13 +50,13 @@ const PersonalSchema = new Schema<IPersonal>(
       required: false,
       default: null
     },
-    estatus: { 
-      type: String, 
-      enum: ["activo", "inactivo"], 
-      default: "activo" 
+    estatus: {
+      type: String,
+      enum: ["activo", "inactivo"],
+      default: "activo"
     },
-    rol: { 
-      type: String, 
+    rol: {
+      type: String,
       enum: ['admin', 'superadmin'],
       default: 'admin'
     },
@@ -67,9 +67,9 @@ const PersonalSchema = new Schema<IPersonal>(
       index: true,
     }
   },
-  { 
-    timestamps: true, 
-    collection: 'personal' 
+  {
+    timestamps: true,
+    collection: 'personal'
   }
 );
 
