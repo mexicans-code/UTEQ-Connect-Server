@@ -248,6 +248,7 @@ export const buscarPersonal = async (termino: string) => {
                 cubiculo: p.cubiculo,
                 planta: p.planta,
                 imagenPerfil: p.imagenPerfil,
+                imagenHorario: p.imagenHorario,
                 ubicacion: ubicacion ? {
                     nombre: ubicacion.nombre,
                     coordenadas: ubicacion.posicion

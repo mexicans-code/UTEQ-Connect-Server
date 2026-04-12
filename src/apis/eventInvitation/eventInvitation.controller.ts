@@ -1,13 +1,34 @@
 import { Request, Response } from 'express';
 import * as invitationService from './eventInvitation.service.js';
+import { io } from '../../index.js'; // 👈 Socket.io
+
+// ── Helper broadcast ─────────────────────────────────────────────────────────
+const broadcastTicketChange = (
+  type: 'ticket_created' | 'ticket_updated' | 'ticket_scanned',
+  data: object
+) => {
+  console.log(`🔔 Socket emit: ${type}`, data);
+  io.emit(type, data);
+};
+
+// ── Controladores ────────────────────────────────────────────────────────────
 
 export const createInvitations = async (req: Request, res: Response) => {
   try {
     const eventoId = Array.isArray(req.params.eventoId) ? req.params.eventoId[0] : req.params.eventoId;
-    const { userIds } = req.body; // Array opcional de IDs de usuarios
+    const { userIds } = req.body;
 
     const result = await invitationService.createInvitationsForEvent(eventoId, userIds);
-    
+
+    // Emitir por cada invitación creada
+    result.created.forEach((inv: any) => {
+      broadcastTicketChange('ticket_created', {
+        invitationId: inv._id,
+        eventoId,
+        userId: inv.usuario,
+      });
+    });
+
     res.status(201).json({
       success: true,
       message: `${result.created.length} invitaciones creadas exitosamente`,
@@ -25,7 +46,7 @@ export const getInvitationByToken = async (req: Request, res: Response) => {
   try {
     const token = Array.isArray(req.params.token) ? req.params.token[0] : req.params.token;
     const invitation = await invitationService.findInvitationByToken(token);
-    
+
     if (!invitation) {
       return res.status(404).json({
         success: false,
@@ -49,6 +70,14 @@ export const validateToken = async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
     const invitation = await invitationService.validateAndUseToken(token);
+
+    // 👇 Emitir: QR escaneado → asistencia registrada
+    broadcastTicketChange('ticket_scanned', {
+      invitationId: (invitation as any)._id,
+      estadoAsistencia: 'asistio',
+      userId: (invitation as any).usuario,
+      eventoId: (invitation as any).evento,
+    });
 
     res.json({
       success: true,
@@ -128,6 +157,14 @@ export const updateInvitationStatus = async (req: Request, res: Response) => {
       });
     }
 
+    // 👇 Emitir: estado de invitación actualizado
+    broadcastTicketChange('ticket_updated', {
+      invitationId: (invitation as any)._id,
+      estadoInvitacion,
+      userId: (invitation as any).usuario,
+      eventoId: (invitation as any).evento,
+    });
+
     res.json({
       success: true,
       message: 'Estado actualizado exitosamente',
@@ -145,7 +182,7 @@ export const respondToInvitation = async (req: Request, res: Response) => {
   try {
     const { token, respuesta } = req.body;
 
-    if (!respuesta || (respuesta !== "aceptada" && respuesta !== "rechazada")) {
+    if (!respuesta || (respuesta !== 'aceptada' && respuesta !== 'rechazada')) {
       return res.status(400).json({
         success: false,
         error: 'Respuesta inválida. Debe ser "aceptada" o "rechazada"'
@@ -153,6 +190,14 @@ export const respondToInvitation = async (req: Request, res: Response) => {
     }
 
     const invitation = await invitationService.respondToInvitationByToken(token, respuesta);
+
+    // 👇 Emitir: usuario aceptó o rechazó su invitación
+    broadcastTicketChange('ticket_updated', {
+      invitationId: (invitation as any)._id,
+      estadoInvitacion: respuesta,
+      userId: (invitation as any).usuario,
+      eventoId: (invitation as any).evento,
+    });
 
     res.json({
       success: true,
@@ -169,11 +214,10 @@ export const respondToInvitation = async (req: Request, res: Response) => {
 
 export const registerToEvent = async (req: Request, res: Response) => {
   try {
-    const eventoId = Array.isArray(req.params.eventoId) 
-      ? req.params.eventoId[0] 
+    const eventoId = Array.isArray(req.params.eventoId)
+      ? req.params.eventoId[0]
       : req.params.eventoId;
 
-    // Obtener el ID del usuario autenticado desde el middleware de autenticación
     const userId = (req as any).user?.id || (req as any).user?._id;
 
     if (!userId) {
@@ -184,16 +228,16 @@ export const registerToEvent = async (req: Request, res: Response) => {
       });
     }
 
-    // Crear la invitación (esto también valida el evento y los cupos)
-    const invitation = await invitationService.createSingleInvitation(
-      eventoId,
-      userId
-    );
+    const invitation = await invitationService.createSingleInvitation(eventoId, userId);
 
-    // Obtener la invitación con los datos completos
-    const fullInvitation = await invitationService.findInvitationByToken(
-      invitation.token
-    );
+    const fullInvitation = await invitationService.findInvitationByToken(invitation.token);
+
+    // 👇 Emitir: nuevo ticket creado por auto-registro
+    broadcastTicketChange('ticket_created', {
+      invitationId: (fullInvitation as any)?._id,
+      eventoId,
+      userId,
+    });
 
     res.status(201).json({
       success: true,
@@ -205,32 +249,16 @@ export const registerToEvent = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error en registro a evento:', error);
-    
-    // Manejar errores específicos
+
     if (error instanceof Error) {
-      // Ya rechazó o invitación caducada
       if (error.message.includes('rechazaste') || error.message.includes('caducó')) {
-        return res.status(409).json({
-          success: false,
-          error: error.message
-        });
+        return res.status(409).json({ success: false, error: error.message });
       }
-      
-      // No encontrado
       if (error.message.includes('no encontrado')) {
-        return res.status(404).json({
-          success: false,
-          error: error.message
-        });
+        return res.status(404).json({ success: false, error: error.message });
       }
-      
-      // No hay cupos o no está activo
-      if (error.message.includes('No hay cupos') || 
-          error.message.includes('no está activo')) {
-        return res.status(400).json({
-          success: false,
-          error: error.message
-        });
+      if (error.message.includes('No hay cupos') || error.message.includes('no está activo')) {
+        return res.status(400).json({ success: false, error: error.message });
       }
     }
 
@@ -246,9 +274,6 @@ export const markAttendance = async (req: Request, res: Response) => {
     const invitationId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { asistio, estadoAsistencia } = req.body;
 
-    // Soportar ambos formatos:
-    //   { estadoAsistencia: "asistio" | "no_asistio" | "pendiente" }  ← frontend actual
-    //   { asistio: true | false }                                      ← formato legacy
     let estadoFinal: string;
     if (estadoAsistencia !== undefined) {
       if (!['asistio', 'no_asistio', 'pendiente'].includes(estadoAsistencia)) {
@@ -282,6 +307,14 @@ export const markAttendance = async (req: Request, res: Response) => {
       });
     }
 
+    // 👇 Emitir: asistencia marcada manualmente desde dashboard
+    broadcastTicketChange('ticket_updated', {
+      invitationId: (invitation as any)._id,
+      estadoAsistencia: estadoFinal,
+      userId: (invitation as any).usuario,
+      eventoId: (invitation as any).evento,
+    });
+
     res.json({
       success: true,
       message: 'Asistencia actualizada exitosamente',
@@ -300,6 +333,14 @@ export const regenerateQR = async (req: Request, res: Response) => {
     const invitationId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const invitation = await invitationService.regenerateQRCode(invitationId);
 
+    // 👇 Emitir: QR regenerado → ticket actualizado
+    broadcastTicketChange('ticket_updated', {
+      invitationId: (invitation as any)._id,
+      userId: (invitation as any).usuario,
+      eventoId: (invitation as any).evento,
+      qrRegenerado: true,
+    });
+
     res.json({
       success: true,
       message: 'Código QR regenerado exitosamente',
@@ -312,9 +353,6 @@ export const regenerateQR = async (req: Request, res: Response) => {
     });
   }
 };
-
-
-// PARA TENER LOS TICKETS DEL USUARIO
 
 export const getMyTickets = async (req: Request, res: Response) => {
   try {
